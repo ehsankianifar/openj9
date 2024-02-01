@@ -10533,6 +10533,14 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
 
    opCode = node->getOpCodeValue();
 
+   cg->generateDebugCounter(TR::DebugCounter::debugCounterName(
+                                       comp,
+                                       "initNew/%s/%s/(%s)",
+                                       node->getOpCode().getName(),
+                                       (node->canSkipZeroInitialization() ? "skipZeroAlloc" : "zeroAlloc"),
+                                       comp->signature()),
+                                    1, TR::DebugCounter::Undetermined);
+
    // Since calls to canInlineAllocate could result in different results during the same compilation,
    // We must be conservative and only do inline allocation if the first call (in LocalOpts.cpp) has succeeded and we have the litPoolBaseChild added.
    // Refer to defects 161084 and 87089
@@ -10575,6 +10583,20 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       else
          {
          isArray = true;
+
+         if (opCode == TR::newarray)
+            {
+            cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp,
+                                       "newarray/%s/({%s}{%s})/n%dn",
+                                       (node->canSkipZeroInitialization() ?
+                                          "skipZeroAlloc"
+                                          : "zeroAlloc"),
+                                       comp->signature(),
+                                       comp->getHotnessName(comp->getMethodHotness()),
+                                       node->getGlobalIndex()),
+                                    1, TR::DebugCounter::Undetermined);
+            }
+
          if (generateArraylets || TR::Compiler->om.useHybridArraylets())
             {
             if (node->getOpCodeValue() == TR::newarray)

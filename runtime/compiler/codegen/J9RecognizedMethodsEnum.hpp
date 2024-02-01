@@ -174,6 +174,7 @@
    java_lang_String_init_String,
    java_lang_String_init_int_String_int_String_String,
    java_lang_String_init_int_int_char_boolean,
+   java_lang_String_init_AbstractStringBuilder_Void,
 
    java_lang_String_trim,
    java_lang_String_charAt,
@@ -1213,6 +1214,7 @@
    java_util_Arrays_copyOf_Object1,
    java_util_Arrays_copyOf_Object2,
    java_util_Arrays_copyOfRange_byte,
+   java_util_Arrays_copyOfRangeByte,
    java_util_Arrays_copyOfRange_short,
    java_util_Arrays_copyOfRange_char,
    java_util_Arrays_copyOfRange_int,

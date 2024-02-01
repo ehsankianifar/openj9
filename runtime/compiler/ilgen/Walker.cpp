@@ -6732,7 +6732,6 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
      node->setCanSkipZeroInitialization(true);
 
    bool generateArraylets = comp()->generateArraylets();
-
    // special case for handling Arrays.copyOf in the StringEncoder fast paths for Java 9+
    if (!comp()->isOutermostMethod() && !comp()->isPeekingMethod()
        && !generateArraylets
@@ -6753,6 +6752,27 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
            break;
         }
      }
+
+   // Special case for handling Arrays.copyOfRangeByte when the caller of caller is String<init>(AbstractStringBuilder, Void).
+   // The caller is always Arrays.copyOfRange since Arrays.copyOfRangeByte is a private method.
+   if ((comp()->getInlineDepth() > 1) && !comp()->isPeekingMethod() && !generateArraylets
+       && _methodSymbol->getRecognizedMethod() == TR::java_util_Arrays_copyOfRangeByte)
+      {
+      int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
+      int32_t callerOfCallerIndex = comp()->getInlinedCallSite(callerIndex)._byteCodeInfo.getCallerIndex();
+      TR::ResolvedMethodSymbol *callerOfCaller = callerOfCallerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerOfCallerIndex) : comp()->getOptimizer()->getMethodSymbol();
+      static const char* skipZeroInitStringBuilder = feGetEnv("TR_SkipZeroInitStringBuilder");
+      if((callerOfCaller->getRecognizedMethod() == TR::java_lang_String_init_AbstractStringBuilder_Void) && skipZeroInitStringBuilder)
+         {
+         node->setCanSkipZeroInitialization(true);
+         }
+      }
+
+   static const char* skipZeroInitUnsafeArray = feGetEnv("TR_SkipZeroInitUnsafeArray");
+   if((_methodSymbol->getRecognizedMethod() == TR::sun_misc_Unsafe_allocateUninitializedArray0) && skipZeroInitUnsafeArray)
+      {
+      node->setCanSkipZeroInitialization(true);
+      }
 
    bool separateInitializationFromAllocation;
    switch (_methodSymbol->getRecognizedMethod())
