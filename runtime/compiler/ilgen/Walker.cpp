@@ -6782,25 +6782,26 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    TR::Node * secondChild=pop();
    TR::Node * firstChild=pop();
    TR::Node * node = TR::Node::createWithSymRef(TR::anewarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateANewArraySymbolRef(_methodSymbol));
-   _methodSymbol->setHasNews(true);
-
+/*
    int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
    TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
    if (trace())
    {
-      traceMsg(comp(), "EHSAN: genANewArray sig: %s rec:%d resSig: %s resRec: %d\n", comp()->signature, _methodSymbol->getRecognizedMethod(), caller->signature, caller->getRecognizedMethod());
+      char* sig = TR::Compiler->cls.classSignature_DEPRECATED(comp(), clazz, len, comp()->trMemory());
+      traceMsg(comp(), "EHSAN: genANewArray sig: %s rec:%d resSig: %s resRec: %d\n", comp()->signature(), _methodSymbol->getRecognizedMethod(), caller->signature(comp()->trMemory()), caller->getRecognizedMethod());
       
       traceMsg(comp(), "EHSAN: AdditionalInfo: sig: %s sigLen: %d class: %s classLen %d name: %s nameLen %d !\n",
-         caller->convertToMethod()->signatureChars(),
-         caller->convertToMethod()->signatureLength(),
-         caller->convertToMethod()->classNameChars(),
-         caller->convertToMethod()->classNameLength(),
-         caller->convertToMethod()->nameChars(),
-         caller->convertToMethod()->nameLength()
+         caller->signatureChars(),
+         caller->signatureLength(),
+         caller->classNameChars(),
+         caller->classNameLength(),
+         caller->nameChars(),
+         caller->nameLength()
          );
 
    }
-
+*/
+   _methodSymbol->setHasNews(true);
    genTreeTop(node);
    push(node);
    genFlush(0);
