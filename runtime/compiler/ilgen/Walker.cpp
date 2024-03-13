@@ -6651,7 +6651,11 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
    TR::Node * node = TR::Node::createWithSymRef(TR::newarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateNewArraySymbolRef(_methodSymbol));
 
    if (_methodSymbol->skipZeroInitializationOnNewarrays())
-     node->setCanSkipZeroInitialization(true);
+   {
+      if (trace())
+         traceMsg(comp(), "EHSAN: skiping zero init in: %s because skipZeroInitializationOnNewarrays.\n", __FUNCTION__);
+      node->setCanSkipZeroInitialization(true);
+   }
 
    bool generateArraylets = comp()->generateArraylets();
 
@@ -6669,6 +6673,8 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
         case TR::java_lang_String_encodeASCII:
         case TR::java_lang_StringCoding_encodeUTF8:
            node->setCanSkipZeroInitialization(true);
+           if (trace())
+               traceMsg(comp(), "EHSAN: skiping zero init in: %s signature: %d\n", __FUNCTION__, caller->getRecognizedMethod());
            break;
 
         default:
@@ -6710,6 +6716,8 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
        comp()->cg()->getSupportsArraySet())
       {
       node->setCanSkipZeroInitialization(true);
+      if (trace())
+         traceMsg(comp(), "EHSAN: skiping zero init in: %s because separateInitializationFromAllocation && getSupportsArraySet.\n", __FUNCTION__);
 
       TR::Node *arrayRefNode;
       int32_t hdrSize = (int32_t) TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
@@ -6775,6 +6783,24 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    TR::Node * firstChild=pop();
    TR::Node * node = TR::Node::createWithSymRef(TR::anewarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateANewArraySymbolRef(_methodSymbol));
    _methodSymbol->setHasNews(true);
+
+   int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
+   TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
+   if (trace())
+   {
+      traceMsg(comp(), "EHSAN: genANewArray sig: %s rec:%d resSig: %s resRec: %d\n", comp()->signature, _methodSymbol->getRecognizedMethod(), caller->signature, caller->getRecognizedMethod());
+      
+      traceMsg(comp(), "EHSAN: AdditionalInfo: sig: %s sigLen: %d class: %s classLen %d name: %s nameLen %d !\n",
+         caller->convertToMethod()->signatureChars(),
+         caller->convertToMethod()->signatureLength(),
+         caller->convertToMethod()->classNameChars(),
+         caller->convertToMethod()->classNameLength(),
+         caller->convertToMethod()->nameChars(),
+         caller->convertToMethod()->nameLength()
+         );
+
+   }
+
    genTreeTop(node);
    push(node);
    genFlush(0);

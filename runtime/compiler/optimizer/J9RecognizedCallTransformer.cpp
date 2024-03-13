@@ -228,6 +228,8 @@ void J9::RecognizedCallTransformer::process_java_lang_StringCoding_encodeASCII(T
    TR::TreeTop *destinationArrayTreeTop = TR::TreeTop::create(comp(), TR::Node::create(node, TR::treetop, 1, destinationArrayNode));
    ifCmpTreeTop->insertAfter(destinationArrayTreeTop);
    destinationArrayNode->setCanSkipZeroInitialization(true);
+   if (trace())
+      traceMsg(comp(), "EHSAN: skiping zero init in: %s\n", __FUNCTION__);
    destinationArrayNode->setIsNonNull(true);
 
    // We now have the length node, and also the destination array. Now we create an encodeASCIISymbol node to do the encoding operation.
