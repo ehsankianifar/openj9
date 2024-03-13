@@ -6652,8 +6652,7 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
 
    if (_methodSymbol->skipZeroInitializationOnNewarrays())
    {
-      if (trace())
-         traceMsg(comp(), "EHSAN: skiping zero init in: %s because skipZeroInitializationOnNewarrays.\n", __FUNCTION__);
+      traceMsg(comp(), "EHSAN: skiping zero init in: %s because skipZeroInitializationOnNewarrays.\n", __FUNCTION__);
       node->setCanSkipZeroInitialization(true);
    }
 
@@ -6673,8 +6672,7 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
         case TR::java_lang_String_encodeASCII:
         case TR::java_lang_StringCoding_encodeUTF8:
            node->setCanSkipZeroInitialization(true);
-           if (trace())
-               traceMsg(comp(), "EHSAN: skiping zero init in: %s signature: %d\n", __FUNCTION__, caller->getRecognizedMethod());
+           traceMsg(comp(), "EHSAN: skiping zero init in: %s signature: %d\n", __FUNCTION__, caller->getRecognizedMethod());
            break;
 
         default:
@@ -6716,8 +6714,8 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
        comp()->cg()->getSupportsArraySet())
       {
       node->setCanSkipZeroInitialization(true);
-      if (trace())
-         traceMsg(comp(), "EHSAN: skiping zero init in: %s because separateInitializationFromAllocation && getSupportsArraySet.\n", __FUNCTION__);
+      traceMsg(comp(), "EHSAN: skiping zero init in: %s because separateInitializationFromAllocation && getSupportsArraySet.\n", __FUNCTION__);
+         
 
       TR::Node *arrayRefNode;
       int32_t hdrSize = (int32_t) TR::Compiler->om.contiguousArrayHeaderSizeInBytes();

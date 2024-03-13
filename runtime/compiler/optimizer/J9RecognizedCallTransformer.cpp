@@ -228,8 +228,8 @@ void J9::RecognizedCallTransformer::process_java_lang_StringCoding_encodeASCII(T
    TR::TreeTop *destinationArrayTreeTop = TR::TreeTop::create(comp(), TR::Node::create(node, TR::treetop, 1, destinationArrayNode));
    ifCmpTreeTop->insertAfter(destinationArrayTreeTop);
    destinationArrayNode->setCanSkipZeroInitialization(true);
-   if (trace())
-      traceMsg(comp(), "EHSAN: skiping zero init in: %s\n", __FUNCTION__);
+   traceMsg(comp(), "EHSAN: skiping zero init in: %s\n", __FUNCTION__);
+      
    destinationArrayNode->setIsNonNull(true);
 
    // We now have the length node, and also the destination array. Now we create an encodeASCIISymbol node to do the encoding operation.
@@ -316,6 +316,7 @@ void J9::RecognizedCallTransformer::process_java_lang_StringUTF16_toBytes(TR::Tr
 
    TR::Node* newByteArrayNode = node;
    newByteArrayNode->setCanSkipZeroInitialization(true);
+   traceMsg(comp(), "EHSAN: skiping zero init in(2): %s\n", __FUNCTION__);
    newByteArrayNode->setIsNonNull(true);
 
    TR::Node* newCallNode = TR::Node::createWithSymRef(node, TR::call, 5,
