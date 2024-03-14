@@ -6781,7 +6781,9 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    TR::Node * firstChild=pop();
    TR::Node * node = TR::Node::createWithSymRef(TR::anewarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateANewArraySymbolRef(_methodSymbol));
 
-   traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", comp()->signature());
+   int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
+   TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
+   traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", caller->signature(comp()->trMemory()));
 /*
    int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
    TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
