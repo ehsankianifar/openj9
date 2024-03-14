@@ -6786,7 +6786,7 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    {
       int32_t callerIndex = site->_byteCodeInfo.getCallerIndex();
       TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
-      char * signature = caller->signature(comp()->trMemory());
+      const char * signature = caller->signature(comp()->trMemory());
       traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", signature);
       static const char* skipZero = feGetEnv("TR_LinkedListSkipZero");
       if(skipZero)
