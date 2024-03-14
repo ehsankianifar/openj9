@@ -6780,41 +6780,26 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    TR::Node * secondChild=pop();
    TR::Node * firstChild=pop();
    TR::Node * node = TR::Node::createWithSymRef(TR::anewarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateANewArraySymbolRef(_methodSymbol));
-   traceMsg(comp(), "EHSAN: generating ANewArray.\n");
+
    TR_InlinedCallSite * site = comp()->getCurrentInlinedCallSite();
-   char * signeture = NULL;
-   if (site == NULL)
-   {
-      traceMsg(comp(), "EHSAN: site is null.\n");
-   }
-   else
+   if (site != NULL)
    {
       int32_t callerIndex = site->_byteCodeInfo.getCallerIndex();
-      traceMsg(comp(), "EHSAN: index: %d.\n", callerIndex);
       TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
-      traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", caller->signature(comp()->trMemory()));
+      char * signature = caller->signature(comp()->trMemory());
+      traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", signature);
+      static const char* skipZero = feGetEnv("TR_LinkedListSkipZero");
+      if(skipZero)
+      {
+         traceMsg(comp(), "EHSAN: allowed to skip zero.\n");
+         if( !strcmp(signature, "java/util/LinkedList.toArray()[Ljava/lang/Object;"))
+         {
+            node->setCanSkipZeroInitialization(true);
+            traceMsg(comp(), "EHSAN: skipping zero init.\n");
+         }
+      }
    }
    
-   
-/*
-   int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
-   TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
-   if (trace())
-   {
-      char* sig = TR::Compiler->cls.classSignature_DEPRECATED(comp(), clazz, len, comp()->trMemory());
-      traceMsg(comp(), "EHSAN: genANewArray sig: %s rec:%d resSig: %s resRec: %d\n", comp()->signature(), _methodSymbol->getRecognizedMethod(), caller->signature(comp()->trMemory()), caller->getRecognizedMethod());
-      
-      traceMsg(comp(), "EHSAN: AdditionalInfo: sig: %s sigLen: %d class: %s classLen %d name: %s nameLen %d !\n",
-         caller->signatureChars(),
-         caller->signatureLength(),
-         caller->classNameChars(),
-         caller->classNameLength(),
-         caller->nameChars(),
-         caller->nameLength()
-         );
-
-   }
-*/
    _methodSymbol->setHasNews(true);
    genTreeTop(node);
    push(node);
