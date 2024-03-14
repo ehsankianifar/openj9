@@ -6780,10 +6780,22 @@ TR_J9ByteCodeIlGenerator::genANewArray()
    TR::Node * secondChild=pop();
    TR::Node * firstChild=pop();
    TR::Node * node = TR::Node::createWithSymRef(TR::anewarray, 2, 2, firstChild, secondChild, symRefTab()->findOrCreateANewArraySymbolRef(_methodSymbol));
-
-   int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
-   TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
-   traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", caller->signature(comp()->trMemory()));
+   traceMsg(comp(), "EHSAN: generating ANewArray.\n");
+   TR_InlinedCallSite * site = comp()->getCurrentInlinedCallSite();
+   char * signeture = NULL;
+   if (site == NULL)
+   {
+      traceMsg(comp(), "EHSAN: site is null.\n");
+   }
+   else
+   {
+      int32_t callerIndex = site->_byteCodeInfo.getCallerIndex();
+      traceMsg(comp(), "EHSAN: index: %d.\n", callerIndex);
+      TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
+      traceMsg(comp(), "EHSAN: generating ANewArray for %s.\n", caller->signature(comp()->trMemory()));
+   }
+   
+   
 /*
    int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
    TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerIndex) : comp()->getMethodSymbol();
