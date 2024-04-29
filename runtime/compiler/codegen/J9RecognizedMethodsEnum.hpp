@@ -270,6 +270,9 @@
    java_lang_StringBuilder_lengthInternal,
    java_lang_StringBuilder_toString,
 
+   java_lang_AbstractStringBuilder_init,
+   java_lang_AbstractStringBuilder_init_int,
+
    java_lang_Throwable_fillInStackTrace,
    java_lang_Throwable_printStackTrace,
 

@@ -2856,6 +2856,13 @@ void TR_ResolvedJ9Method::construct()
 
       {  TR::unknownMethod}
       };
+   static X AbstractStringBuilderMethods[] =
+      {
+      {x(TR::java_lang_AbstractStringBuilder_init,               "<init>",             "()V")},
+      {x(TR::java_lang_AbstractStringBuilder_init_int,           "<init>",             "(I)V")},
+
+      {  TR::unknownMethod}
+      };
 
    static X SystemMethods[] =
       {
@@ -4122,6 +4129,7 @@ void TR_ResolvedJ9Method::construct()
       { "java/lang/J9VMInternals", VMInternalsMethods },
       { "java/lang/ref/Reference", ReferenceMethods },
       { "java/lang/StringBuilder", StringBuilderMethods },
+      { "java/lang/AbstractStringBuilder", AbstractStringBuilderMethods },
       { "java/lang/reflect/Array", ArrayMethods},
       { "java/nio/HeapByteBuffer", HeapByteBufferMethods},
       { "sun/nio/ch/NativeThread", NativeThreadMethods},
