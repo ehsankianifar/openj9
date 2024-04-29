@@ -2856,6 +2856,7 @@ void TR_ResolvedJ9Method::construct()
 
       {  TR::unknownMethod}
       };
+
    static X AbstractStringBuilderMethods[] =
       {
       {x(TR::java_lang_AbstractStringBuilder_init,               "<init>",             "()V")},
@@ -4129,7 +4130,6 @@ void TR_ResolvedJ9Method::construct()
       { "java/lang/J9VMInternals", VMInternalsMethods },
       { "java/lang/ref/Reference", ReferenceMethods },
       { "java/lang/StringBuilder", StringBuilderMethods },
-      { "java/lang/AbstractStringBuilder", AbstractStringBuilderMethods },
       { "java/lang/reflect/Array", ArrayMethods},
       { "java/nio/HeapByteBuffer", HeapByteBufferMethods},
       { "sun/nio/ch/NativeThread", NativeThreadMethods},
@@ -4211,6 +4211,7 @@ void TR_ResolvedJ9Method::construct()
       { "jdk/internal/reflect/Reflection", ReflectionMethods },
       { "jdk/internal/util/Preconditions", PreconditionsMethods },
       { "jdk/internal/util/ArraysSupport", ArraysSupportMethods },
+      { "java/lang/AbstractStringBuilder", AbstractStringBuilderMethods },
       { 0 }
       };
    static Y class32[] =
