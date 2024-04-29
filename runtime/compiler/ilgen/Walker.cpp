@@ -6774,6 +6774,12 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
       node->setCanSkipZeroInitialization(true);
       }
 
+   static const char* skipZeroInitStringBuilderInit = feGetEnv("TR_SkipZeroInitStringBuilderInit");
+   if((_methodSymbol->getRecognizedMethod() == TR::java_lang_StringBuilder_init_int) && skipZeroInitStringBuilderInit)
+      {
+      node->setCanSkipZeroInitialization(true);
+      }
+
    bool separateInitializationFromAllocation;
    switch (_methodSymbol->getRecognizedMethod())
       {
