@@ -6719,6 +6719,31 @@ TR_J9ByteCodeIlGenerator::genAconst_init(TR_OpaqueClassBlock *valueTypeClass, in
    genFlush(0);
    }
 
+// returns true if call chain is StringBuilder.toString() -> String<init>(StringBuilder)
+//                -> String<init>(AbstractStringBuilder, Void) -> Arrays.copyOfRange([BII)
+// The inline depth must be at least 4 otherwise exception would occur.
+static bool isNewArrayResultOfStringBuilderToString(TR::Compilation *comp)
+   {
+   int32_t callerIndex = comp->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
+   if(comp->getInlinedResolvedMethodSymbol(callerIndex)->getRecognizedMethod() != TR::java_util_Arrays_copyOfRange_byte)
+      return false;
+
+   callerIndex = comp->getInlinedCallSite(callerIndex)._byteCodeInfo.getCallerIndex();
+   if(comp->getInlinedResolvedMethodSymbol(callerIndex)->getRecognizedMethod() != TR::java_lang_String_init_AbstractStringBuilder_Void)
+      return false;
+
+   callerIndex = comp->getInlinedCallSite(callerIndex)._byteCodeInfo.getCallerIndex();
+   if(comp->getInlinedResolvedMethodSymbol(callerIndex)->getRecognizedMethod() != TR::java_lang_String_init_StringBuilder)
+      return false;
+
+   callerIndex = comp->getInlinedCallSite(callerIndex)._byteCodeInfo.getCallerIndex();
+   TR::ResolvedMethodSymbol *caller = callerIndex > -1 ? comp->getInlinedResolvedMethodSymbol(callerIndex) : comp->getOptimizer()->getMethodSymbol();
+   if(caller->getRecognizedMethod() != TR::java_lang_StringBuilder_toString)
+      return false;
+
+   return true;
+   }
+
 void
 TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
    {
@@ -6755,14 +6780,12 @@ TR_J9ByteCodeIlGenerator::genNewArray(int32_t typeIndex)
 
    // Special case for handling Arrays.copyOfRangeByte when the caller of caller is String<init>(AbstractStringBuilder, Void).
    // The caller is always Arrays.copyOfRange since Arrays.copyOfRangeByte is a private method.
-   if ((comp()->getInlineDepth() > 1) && !comp()->isPeekingMethod() && !generateArraylets
-       && _methodSymbol->getRecognizedMethod() == TR::java_util_Arrays_copyOfRangeByte)
+   if ((comp()->getInlineDepth() >= 4) && !comp()->isPeekingMethod() && !generateArraylets
+       && _methodSymbol->getRecognizedMethod() == TR::java_util_Arrays_copyOfRangeByte
+       && isNewArrayResultOfStringBuilderToString(comp()))
       {
-      int32_t callerIndex = comp()->getCurrentInlinedCallSite()->_byteCodeInfo.getCallerIndex();
-      int32_t callerOfCallerIndex = comp()->getInlinedCallSite(callerIndex)._byteCodeInfo.getCallerIndex();
-      TR::ResolvedMethodSymbol *callerOfCaller = callerOfCallerIndex > -1 ? comp()->getInlinedResolvedMethodSymbol(callerOfCallerIndex) : comp()->getOptimizer()->getMethodSymbol();
       static const char* skipZeroInitStringBuilder = feGetEnv("TR_SkipZeroInitStringBuilder");
-      if((callerOfCaller->getRecognizedMethod() == TR::java_lang_String_init_AbstractStringBuilder_Void) && skipZeroInitStringBuilder)
+      if(skipZeroInitStringBuilder)
          {
          node->setCanSkipZeroInitialization(true);
          }

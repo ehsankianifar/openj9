@@ -174,6 +174,7 @@
    java_lang_String_init_String,
    java_lang_String_init_int_String_int_String_String,
    java_lang_String_init_int_int_char_boolean,
+   java_lang_String_init_StringBuilder,
    java_lang_String_init_AbstractStringBuilder_Void,
 
    java_lang_String_trim,
