@@ -356,10 +356,6 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
             /* The order is important: we have to request it before the first TLH is created. */
             /* Platform detection seems difficult at this point.                              */
             {
-#ifdef TR_HOST_X86
-            static char *enableBatchClear = feGetEnv2("TR_EnableBatchClear", (void *)vm);
-
-#else //ppc and s390
             static char *disableBatchClear = feGetEnv2("TR_DisableBatchClear", (void *)vm);
 #ifdef TR_HOST_POWER
             static char *disableDualTLH   = feGetEnv2("TR_DisableDualTLH", (void *)vm);
@@ -369,20 +365,15 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
             //Non P6, P7 and up are allowed to batch clear however.
             bool disableZeroedTLHPages = disableDualTLH && (((notlhPrefetch >= 0) || (!TR::Compiler->target.cpu.is(OMR_PROCESSOR_PPC_P6) && !TR::Compiler->target.cpu.is(OMR_PROCESSOR_PPC_P7))));
 #endif//TR_HOST_POWER
-#endif//TR_HOST_X86
            /*in testmode, the JIT will be loaded by a native. At this point it's too late to change
             * the TLH mode, and it won't matter anyway, since JIT'ed code won't be run.
             * See CMVC 70078
             */
             if (
-#ifdef TR_HOST_X86
-                 enableBatchClear
-#else//ppc and s390
                  disableBatchClear==0
 #ifdef TR_HOST_POWER
                   &&!disableZeroedTLHPages
 #endif//TR_HOST_POWER
-#endif//TR_HOST_X86
             )
                {
                J9VMDllLoadInfo *gcLoadInfo = getGCDllLoadInfo(vm);
