@@ -10536,7 +10536,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    const char *typeName = "";
    if(node->getOpCodeValue()==TR::New)
    {
-      typeName = node->getFirstChild()->getSymbolReference()->getName();
+      typeName = node->getFirstChild()->getSymbolReference()->getName(cg->getDebug());
    }
 
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(
