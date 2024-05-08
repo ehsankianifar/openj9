@@ -14102,6 +14102,12 @@ J9::Z::TreeEvaluator::inlineIntegerToCharsForLatin1Strings(TR::Node *node, TR::C
    TR::Node *inputValueNode = node->getChild(0);
    TR::Node *stringSizeNode = node->getChild(1);
    TR::Node *byteArrayNode = node->getChild(2);
+   static const char* skipZeroInitIntToString = feGetEnv("TR_SkipZeroInitIntToString");
+   if(skipZeroInitIntToString)
+      {
+      byteArrayNode->setCanSkipZeroInitialization(true);
+      traceMsg(comp, "EHSAN: skiping zero int to string!\n");
+      }
 
    TR::Register *inputValueReg = cg->evaluate(inputValueNode);
    TR::Register *stringSizeReg = cg->gprClobberEvaluate(stringSizeNode, true);
