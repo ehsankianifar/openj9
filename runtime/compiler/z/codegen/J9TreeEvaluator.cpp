@@ -10533,6 +10533,20 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
 
    opCode = node->getOpCodeValue();
 
+   const char *typeName = "";
+   if(node->getOpCodeValue()==TR::New)
+   {
+      typeName = node->getFirstChild()->getSymbolReference()->getName();
+   }
+
+   cg->generateDebugCounter(TR::DebugCounter::debugCounterName(
+                                       comp,
+                                       "initNewObj/%s/%s/(%s)",
+                                       node->getOpCode().getName(),
+                                       (node->canSkipZeroInitialization() ? "skipZeroAlloc" : "zeroAlloc"),
+                                       typeName),
+                                    1, TR::DebugCounter::Undetermined);
+
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(
                                        comp,
                                        "initNew/%s/%s/(%s)",
