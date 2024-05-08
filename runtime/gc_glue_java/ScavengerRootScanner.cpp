@@ -114,7 +114,7 @@ MM_ScavengerRootScanner::scavengeFinalizableObjects(MM_EnvironmentStandard *env)
 		while (NULL != systemObject) {
 			omrobjectptr_t next = NULL;
 			if(_scavenger->isObjectInEvacuateMemory(systemObject)) {
-				MM_ForwardedHeader forwardedHeader(systemObject, compressed);
+				MM_ForwardedHeader forwardedHeader(systemObject, compressed,9);
 				if (!forwardedHeader.isForwardedPointer()) {
 					next = _extensions->accessBarrier->getFinalizeLink(systemObject);
 					omrobjectptr_t copiedObject = _scavenger->copyObject(env, &forwardedHeader);
@@ -146,7 +146,7 @@ MM_ScavengerRootScanner::scavengeFinalizableObjects(MM_EnvironmentStandard *env)
 		while (NULL != defaultObject) {
 			omrobjectptr_t next = NULL;
 			if(_scavenger->isObjectInEvacuateMemory(defaultObject)) {
-				MM_ForwardedHeader forwardedHeader(defaultObject, compressed);
+				MM_ForwardedHeader forwardedHeader(defaultObject, compressed,10);
 				if (!forwardedHeader.isForwardedPointer()) {
 					next = _extensions->accessBarrier->getFinalizeLink(defaultObject);
 					omrobjectptr_t copiedObject = _scavenger->copyObject(env, &forwardedHeader);
@@ -178,7 +178,7 @@ MM_ScavengerRootScanner::scavengeFinalizableObjects(MM_EnvironmentStandard *env)
 		while (NULL != referenceObject) {
 			omrobjectptr_t next = NULL;
 			if(_scavenger->isObjectInEvacuateMemory(referenceObject)) {
-				MM_ForwardedHeader forwardedHeader(referenceObject, compressed);
+				MM_ForwardedHeader forwardedHeader(referenceObject, compressed,11);
 				if (!forwardedHeader.isForwardedPointer()) {
 					next = _extensions->accessBarrier->getReferenceLink(referenceObject);
 					omrobjectptr_t copiedObject = _scavenger->copyObject(env, &forwardedHeader);

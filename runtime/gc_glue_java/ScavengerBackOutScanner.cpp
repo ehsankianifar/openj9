@@ -99,7 +99,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			/* walk finalizable objects loaded by the system class loader */
 			omrobjectptr_t systemObject = finalizeListManager->resetSystemFinalizableObjects();
 			while (NULL != systemObject) {
-				MM_ForwardedHeader forwardHeader(systemObject, compressed);
+				MM_ForwardedHeader forwardHeader(systemObject, compressed, 68);
 				omrobjectptr_t forwardPtr = forwardHeader.getNonStrictForwardedObject();
 
 				if (NULL != forwardPtr) {
@@ -122,7 +122,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			/* walk finalizable objects loaded by the all other class loaders */
 			omrobjectptr_t defaultObject = finalizeListManager->resetDefaultFinalizableObjects();
 			while (NULL != defaultObject) {
-				MM_ForwardedHeader forwardHeader(defaultObject, compressed);
+				MM_ForwardedHeader forwardHeader(defaultObject, compressed, 69);
 				omrobjectptr_t forwardPtr = forwardHeader.getNonStrictForwardedObject();
 
 				if (NULL != forwardPtr) {
@@ -145,7 +145,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			GC_FinalizableReferenceBuffer referenceBuffer(_extensions);
 			omrobjectptr_t referenceObject = finalizeListManager->resetReferenceObjects();
 			while (NULL != referenceObject) {
-				MM_ForwardedHeader forwardHeader(referenceObject, compressed);
+				MM_ForwardedHeader forwardHeader(referenceObject, compressed, 70);
 				omrobjectptr_t forwardPtr = forwardHeader.getNonStrictForwardedObject();
 
 				if (NULL != forwardPtr) {
@@ -172,7 +172,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			omrobjectptr_t systemObject = finalizeListManager->resetSystemFinalizableObjects();
 			while (NULL != systemObject) {
 				omrobjectptr_t next = NULL;
-				MM_ForwardedHeader forwardHeader(systemObject, compressed);
+				MM_ForwardedHeader forwardHeader(systemObject, compressed, 71);
 				Assert_MM_false(forwardHeader.isForwardedPointer());
 				if (forwardHeader.isReverseForwardedPointer()) {
 					omrobjectptr_t originalObject = forwardHeader.getReverseForwardedPointer();
@@ -199,7 +199,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			omrobjectptr_t defaultObject = finalizeListManager->resetDefaultFinalizableObjects();
 			while (NULL != defaultObject) {
 				omrobjectptr_t next = NULL;
-				MM_ForwardedHeader forwardHeader(defaultObject, compressed);
+				MM_ForwardedHeader forwardHeader(defaultObject, compressed, 72);
 				Assert_MM_false(forwardHeader.isForwardedPointer());
 				if (forwardHeader.isReverseForwardedPointer()) {
 					omrobjectptr_t originalObject = forwardHeader.getReverseForwardedPointer();
@@ -222,7 +222,7 @@ MM_ScavengerBackOutScanner::backoutFinalizableObjects(MM_EnvironmentStandard *en
 			omrobjectptr_t referenceObject = finalizeListManager->resetReferenceObjects();
 			while (NULL != referenceObject) {
 				omrobjectptr_t next = NULL;
-				MM_ForwardedHeader forwardHeader(referenceObject, compressed);
+				MM_ForwardedHeader forwardHeader(referenceObject, compressed, 73);
 				Assert_MM_false(forwardHeader.isForwardedPointer());
 				if (forwardHeader.isReverseForwardedPointer()) {
 					omrobjectptr_t originalObject = forwardHeader.getReverseForwardedPointer();
@@ -275,7 +275,7 @@ MM_ScavengerBackOutScanner::backoutUnfinalizedObjects(MM_EnvironmentStandard *en
 				if (!list->wasEmpty()) {
 					omrobjectptr_t object = list->getPriorList();
 					while (NULL != object) {
-						MM_ForwardedHeader forwardHeader(object, compressed);
+						MM_ForwardedHeader forwardHeader(object, compressed, 74);
 						omrobjectptr_t forwardPtr = forwardHeader.getNonStrictForwardedObject();
 						if (NULL != forwardPtr) {
 							if (forwardHeader.isSelfForwardedPointer()) {
@@ -305,7 +305,7 @@ MM_ScavengerBackOutScanner::backoutUnfinalizedObjects(MM_EnvironmentStandard *en
 					omrobjectptr_t object = list->getPriorList();
 					while (NULL != object) {
 						omrobjectptr_t next = NULL;
-						MM_ForwardedHeader forwardHeader(object, compressed);
+						MM_ForwardedHeader forwardHeader(object, compressed, 75);
 						Assert_MM_false(forwardHeader.isForwardedPointer());
 						if (forwardHeader.isReverseForwardedPointer()) {
 							omrobjectptr_t originalObject = forwardHeader.getReverseForwardedPointer();

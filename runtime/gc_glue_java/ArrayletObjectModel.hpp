@@ -234,7 +234,16 @@ public:
 	MMINLINE uintptr_t
 	getSpineSize(J9Class *clazzPtr, ArrayLayout layout, uintptr_t size)
 	{
-		return getHeaderSize(clazzPtr, layout) + getSpineSizeWithoutHeader(clazzPtr, layout, size);
+		uintptr_t headersize =  getHeaderSize(clazzPtr, layout);
+		uintptr_t spinSize=  getSpineSizeWithoutHeader(clazzPtr, layout, size);
+
+		if(headersize + spinSize > 10000000)
+		{
+			uintptr_t dataSize = getDataSizeInBytes(clazzPtr, size);
+			uintptr_t numberArraylets = numArraylets(dataSize);
+			printf("EHSAN2: header size: %zu, spin size: %zu, size: %zu, layout: %u, data size: %zu, num arrays: %zu\n",headersize, spinSize, size, layout, dataSize, numberArraylets);
+		}
+		return headersize + spinSize;
 	}
 
 	/**
@@ -1138,18 +1147,34 @@ public:
 		 * out of the heap.
 		 */
 		uint32_t size = 0;
+		uint32_t location = 0;
 #if defined (OMR_GC_COMPRESSED_POINTERS)
+		location = 1;
 		if (compressObjectReferences()) {
+			location += 10;
 			size = forwardedHeader->getPreservedOverlap();
+			//EHSAN: size is calculated here!
+			
 		} else
 #endif /* defined (OMR_GC_COMPRESSED_POINTERS) */
 		{
+			location += 20;
 			size = ((J9IndexableObjectContiguousFull *)forwardedHeader->getObject())->size;
 		}
 
 		if (0 == size) {
 			/* Discontiguous */
+			location +=100;
 			size = getDiscontiguousArraySize((J9IndexableObject *)forwardedHeader->getObject());
+		}
+		uint32_t logLimit = (uint32_t)atoi(std::getenv("TR_LogLimit"));
+		uint32_t objectSize = 0;
+		if(((J9IndexableObjectContiguousFull *)forwardedHeader->getObject()))
+			objectSize=((J9IndexableObjectContiguousFull *)forwardedHeader->getObject())->size;
+
+		if(size > logLimit)
+		{
+			printf("EHSAN3: Size: %u, location: %u, object Size%u\n", size, location, objectSize);
 		}
 
 		return size;
@@ -1204,7 +1229,14 @@ public:
 		uintptr_t numberOfElements = (uintptr_t)getPreservedIndexableSize(forwardedHeader);
 		ArrayLayout layout = getArrayletLayout(clazz, numberOfElements);
 		*hashcodeOffset = getHashcodeOffset(clazz, layout, numberOfElements);
-		return getSizeInBytesWithHeader(clazz, layout, numberOfElements);
+		uintptr_t result =  getSizeInBytesWithHeader(clazz, layout, numberOfElements);
+		uintptr_t logLimit = (uintptr_t)atoi(std::getenv("TR_LogLimit"));
+		if(numberOfElements > logLimit)
+		{
+			printf( "EHSAN: elements: %zu, result: %zu, layout: %u, offset: %zu\n", numberOfElements, result, layout, *hashcodeOffset);
+		}
+		
+		return result;
 	}
 
 	/**

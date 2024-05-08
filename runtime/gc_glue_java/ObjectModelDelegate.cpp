@@ -61,12 +61,15 @@ GC_ObjectModelDelegate::calculateObjectDetailsForCopy(MM_EnvironmentBase *env, M
 	J9Class* clazz = objectModel->getPreservedClass(forwardedHeader);
 	uintptr_t actualObjectCopySizeInBytes = 0;
 	uintptr_t hashcodeOffset = 0;
+	int location =0;
 
 	if (objectModel->isIndexable(clazz)) {
 		*objectCopySizeInBytes = env->getExtensions()->indexableObjectModel.calculateObjectSizeAndHashcode(forwardedHeader, &hashcodeOffset);
+		location = 1;
 	} else {
 		*objectCopySizeInBytes = clazz->totalInstanceSize + J9GC_OBJECT_HEADER_SIZE(env->getExtensions());
 		hashcodeOffset = env->getExtensions()->mixedObjectModel.getHashcodeOffset(clazz);
+		location = 2;
 	}
 
 	/* IF the object has been hashed and has not been moved, then we need generate hash from the old address */
@@ -75,13 +78,21 @@ GC_ObjectModelDelegate::calculateObjectDetailsForCopy(MM_EnvironmentBase *env, M
 	if (hashcodeOffset == *objectCopySizeInBytes) {
 		if (objectModel->hasBeenMoved(forwardedHeaderPreservedFlags)) {
 			*objectCopySizeInBytes += sizeof(uintptr_t);
+			location += 10;
 		} else if (objectModel->hasBeenHashed(forwardedHeaderPreservedFlags)) {
 			actualObjectCopySizeInBytes += sizeof(uintptr_t);
+			location += 20;
 		}
 	}
 	actualObjectCopySizeInBytes += *objectCopySizeInBytes;
 	*reservedObjectSizeInBytes = objectModel->adjustSizeInBytes(actualObjectCopySizeInBytes);
 	*hotFieldAlignmentDescriptor = clazz->instanceHotFieldDescription;
+	// Assert_GC_true_with_message4(env, *objectCopySizeInBytes < 52428800, 
+	// "Large object size %zu: actual size %zu rezerved size %zu, location %u\n",
+	// *objectCopySizeInBytes,
+	// actualObjectCopySizeInBytes,
+	// *reservedObjectSizeInBytes,
+	// location);
 }
 #endif /* defined(OMR_GC_MODRON_SCAVENGER) */
 
