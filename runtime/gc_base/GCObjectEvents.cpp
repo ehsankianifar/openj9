@@ -95,8 +95,7 @@ localGCReportObjectEvents(MM_EnvironmentBase *env, MM_MemorySubSpaceSemiSpace *m
 				if (extensions->objectModel.isDeadObject(objectPtr)) {
 					objectPtr = (J9Object *)((U_8 *)objectPtr + extensions->objectModel.getSizeInBytesDeadObject(objectPtr));
 				} else {
-					// EHSAN: creating forward header here:
-					MM_ForwardedHeader forwardHeader(objectPtr, compressed, 67);
+					MM_ForwardedHeader forwardHeader(objectPtr, compressed);
 					if (forwardHeader.isForwardedPointer()) {
 						J9Object *forwardPtr = forwardHeader.getForwardedObject();
 						Assert_MM_true(NULL != forwardPtr);

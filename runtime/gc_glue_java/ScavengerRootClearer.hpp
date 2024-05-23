@@ -207,7 +207,7 @@ public:
 		_env->getGCEnvironment()->_scavengerJavaStats._monitorReferenceCandidates += 1;
 		
 		if (_scavenger->isObjectInEvacuateMemory(objectPtr)) {
-			MM_ForwardedHeader forwardedHeader(objectPtr, compressed,6);
+			MM_ForwardedHeader forwardedHeader(objectPtr, compressed);
 			omrobjectptr_t forwardPtr = forwardedHeader.getForwardedObject();
 			if (NULL != forwardPtr) {
 				monitor->userData = (uintptr_t)forwardPtr;
@@ -254,7 +254,7 @@ public:
 		bool const compressed = _extensions->compressObjectReferences();
 		omrobjectptr_t objectPtr = *slotPtr;
 		if (objectPtr && _scavenger->isObjectInEvacuateMemory(objectPtr)) {
-			MM_ForwardedHeader forwardedHeader(objectPtr, compressed,7);
+			MM_ForwardedHeader forwardedHeader(objectPtr, compressed);
 			*slotPtr = forwardedHeader.getForwardedObject();
 		}
 	}
@@ -266,7 +266,7 @@ public:
 		bool const compressed = _extensions->compressObjectReferences();
 		omrobjectptr_t objectPtr = *slotPtr;
 		if (objectPtr && _scavenger->isObjectInEvacuateMemory(objectPtr)) {
-			MM_ForwardedHeader forwardedHeader(objectPtr, compressed,8);
+			MM_ForwardedHeader forwardedHeader(objectPtr, compressed);
 			*slotPtr = forwardedHeader.getForwardedObject();
 		}
 	}

@@ -764,7 +764,7 @@ MM_StandardAccessBarrier::preWeakRootSlotRead(J9VMThread *vmThread, j9object_t *
 		Assert_MM_true(_scavenger->isConcurrentCycleInProgress());
 		Assert_MM_true(_scavenger->isMutatorThreadInSyncWithCycle(env));
 
-		MM_ForwardedHeader forwardHeader(object, compressed, 76);
+		MM_ForwardedHeader forwardHeader(object, compressed);
 		omrobjectptr_t forwardPtr = forwardHeader.getForwardedObject();
 
 		if (NULL != forwardPtr) {
@@ -792,7 +792,7 @@ MM_StandardAccessBarrier::preWeakRootSlotRead(J9JavaVM *vm, j9object_t *srcAddre
 	if ((NULL != _scavenger) && _scavenger->isObjectInEvacuateMemory(object)) {
 		Assert_MM_true(_scavenger->isConcurrentCycleInProgress());
 
-		MM_ForwardedHeader forwardHeader(object, compressed, 77);
+		MM_ForwardedHeader forwardHeader(object, compressed);
 		omrobjectptr_t forwardPtr = forwardHeader.getForwardedObject();
 
 		if (NULL != forwardPtr) {
@@ -819,7 +819,7 @@ MM_StandardAccessBarrier::preObjectRead(J9VMThread *vmThread, J9Class *srcClass,
 		Assert_MM_true(_scavenger->isConcurrentCycleInProgress());
 		Assert_MM_true(_scavenger->isMutatorThreadInSyncWithCycle(env));
 
-		MM_ForwardedHeader forwardHeader(object, compressed, 78);
+		MM_ForwardedHeader forwardHeader(object, compressed);
 		omrobjectptr_t forwardPtr = forwardHeader.getForwardedObject();
 
 		if (NULL != forwardPtr) {
@@ -876,7 +876,7 @@ MM_StandardAccessBarrier::preObjectRead(J9VMThread *vmThread, J9Object *srcObjec
 			}
 
 			GC_SlotObject slotObject(env->getOmrVM(), srcAddress);
-			MM_ForwardedHeader forwardHeader(object, compressed, 79);
+			MM_ForwardedHeader forwardHeader(object, compressed);
 			omrobjectptr_t forwardPtr = forwardHeader.getForwardedObject();
 			if (NULL != forwardPtr) {
 				/* Object has been strictly (remotely) forwarded. Ensure the object is fully copied before exposing it, update the slot and return. */

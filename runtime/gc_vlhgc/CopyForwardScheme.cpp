@@ -1273,7 +1273,7 @@ MM_CopyForwardScheme::copyAndForward(MM_EnvironmentVLHGC *env, MM_AllocationCont
 
 	if ((NULL != objectPtr) && isObjectInEvacuateMemory(objectPtr)) {
 		/* Object needs to be copy and forwarded.  Check if the work has already been done */
-		MM_ForwardedHeader forwardHeader(objectPtr, _extensions->compressObjectReferences(), 79);
+		MM_ForwardedHeader forwardHeader(objectPtr, _extensions->compressObjectReferences());
 		objectPtr = forwardHeader.getForwardedObject();
 		
 		if (NULL != objectPtr) {
@@ -1896,7 +1896,7 @@ MM_CopyForwardScheme::updateForwardedPointer(J9Object *objectPtr)
 	J9Object *forwardPtr;
 
 	if (isObjectInEvacuateMemory(objectPtr)) {
-		MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),12);
+		MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 		forwardPtr = forwardedHeader.getForwardedObject();
 		if (forwardPtr != NULL) {
 			return forwardPtr;
@@ -3477,7 +3477,7 @@ MM_CopyForwardScheme::scanUnfinalizedObjects(MM_EnvironmentVLHGC *env)
 					 * 1. it was copied before unfinalized processing began, or
 					 * 2. it was copied by this thread.
 					 */
-					MM_ForwardedHeader forwardedHeader(pointer, _extensions->compressObjectReferences(),13);
+					MM_ForwardedHeader forwardedHeader(pointer, _extensions->compressObjectReferences());
 					J9Object *forwardedPtr = forwardedHeader.getForwardedObject();
 					if (NULL == forwardedPtr) {
 						if (_markMap->isBitSet(pointer)) {
@@ -3544,7 +3544,7 @@ MM_CopyForwardScheme::scanContinuationObjects(MM_EnvironmentVLHGC *env)
 					 * 1. it was copied before continuation processing began, or
 					 * 2. it was copied by this thread.
 					 */
-					MM_ForwardedHeader forwardedHeader(pointer, _extensions->compressObjectReferences(),14);
+					MM_ForwardedHeader forwardedHeader(pointer, _extensions->compressObjectReferences());
 					J9Object *forwardedPtr = forwardedHeader.getForwardedObject();
 					if ((NULL == forwardedPtr) || VM_ContinuationHelpers::isFinished(*VM_ContinuationHelpers::getContinuationStateAddress((J9VMThread *)env->getLanguageVMThread() , forwardedPtr))) {
 						if (_markMap->isBitSet(pointer)) {
@@ -4020,7 +4020,7 @@ private:
 		J9Object *objectPtr = (J9Object *)monitor->userData;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),15);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			J9Object *forwardPtr = forwardedHeader.getForwardedObject();
 			if (NULL != forwardPtr) {
 				monitor->userData = (UDATA)forwardPtr;
@@ -4048,7 +4048,7 @@ private:
 		J9Object *objectPtr = *slotPtr;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),16);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			*slotPtr = forwardedHeader.getForwardedObject();
 		}
 	}
@@ -4058,7 +4058,7 @@ private:
 		MM_EnvironmentVLHGC::getEnvironment(_env)->_copyForwardStats._stringConstantsCandidates += 1;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),17);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			objectPtr = forwardedHeader.getForwardedObject();
 			if (NULL == objectPtr) {
 				Assert_MM_mustBeClass(_extensions->objectModel.getPreservedClass(&forwardedHeader));
@@ -4076,7 +4076,7 @@ private:
 		env->_copyForwardStats._doubleMappedArrayletsCandidates += 1;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),18);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			objectPtr = forwardedHeader.getForwardedObject();
 			if (NULL == objectPtr) {
 				Assert_MM_mustBeClass(_extensions->objectModel.getPreservedClass(&forwardedHeader));
@@ -4095,7 +4095,7 @@ private:
 		J9Object *objectPtr = *slotPtr;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),19);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			*slotPtr = forwardedHeader.getForwardedObject();
 		}
 	}
@@ -4106,7 +4106,7 @@ private:
 		J9Object *objectPtr = *slotPtr;
 		if (!_copyForwardScheme->isLiveObject(objectPtr)) {
 			Assert_MM_true(_copyForwardScheme->isObjectInEvacuateMemory(objectPtr));
-			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences(),20);
+			MM_ForwardedHeader forwardedHeader(objectPtr, _extensions->compressObjectReferences());
 			*slotPtr = forwardedHeader.getForwardedObject();
 		}
 	}
@@ -5409,7 +5409,7 @@ MM_CopyForwardScheme::scanFinalizableObjects(MM_EnvironmentVLHGC *env)
 			j9object_t next = NULL;
 			if (!isLiveObject(referenceObject)) {
 				Assert_MM_true(isObjectInEvacuateMemory(referenceObject));
-				MM_ForwardedHeader forwardedHeader(referenceObject, _extensions->compressObjectReferences(),21);
+				MM_ForwardedHeader forwardedHeader(referenceObject, _extensions->compressObjectReferences());
 				if (!forwardedHeader.isForwardedPointer()) {
 					Assert_MM_mustBeClass(_extensions->objectModel.getPreservedClass(&forwardedHeader));
 					next = _extensions->accessBarrier->getReferenceLink(referenceObject);
@@ -5450,7 +5450,7 @@ MM_CopyForwardScheme::scanFinalizableList(MM_EnvironmentVLHGC *env, j9object_t h
 
 		if (!isLiveObject(headObject)) {
 			Assert_MM_true(isObjectInEvacuateMemory(headObject));
-			MM_ForwardedHeader forwardedHeader(headObject, _extensions->compressObjectReferences(),22);
+			MM_ForwardedHeader forwardedHeader(headObject, _extensions->compressObjectReferences());
 			if (!forwardedHeader.isForwardedPointer()) {
 				Assert_MM_mustBeClass(_extensions->objectModel.getPreservedClass(&forwardedHeader));
 				next = _extensions->accessBarrier->getFinalizeLink(headObject);

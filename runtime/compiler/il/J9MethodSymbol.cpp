@@ -713,8 +713,6 @@ static TR::RecognizedMethod canSkipZeroInitializationOnNewarrays[] =
    TR::java_lang_StringCoding_decode,
    TR::java_lang_StringCoding_StringEncoder_encode,
    TR::java_lang_StringCoding_StringDecoder_decode,
-   TR::java_lang_Integer_toString,
-   TR::java_lang_Long_toString,
    //TR::sun_misc_Unsafe_allocateUninitializedArray0,
    //TR::java_lang_StringBuilder_ensureCapacityImpl,
    //TR::java_lang_StringBuffer_ensureCapacityImpl,

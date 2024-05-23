@@ -181,7 +181,7 @@ MM_ScavengerRootClearer::scavengeUnfinalizedObjects(MM_EnvironmentStandard *env)
 							omrobjectptr_t next = NULL;
 							gcEnv->_scavengerJavaStats._unfinalizedCandidates += 1;
 
-							MM_ForwardedHeader forwardedHeader(object, compressed,4);
+							MM_ForwardedHeader forwardedHeader(object, compressed);
 							if (!forwardedHeader.isForwardedPointer()) {
 								Assert_MM_true(_scavenger->isObjectInEvacuateMemory(object));
 								next = _extensions->accessBarrier->getFinalizeLink(object);
@@ -240,7 +240,7 @@ MM_ScavengerRootClearer::scavengeContinuationObjects(MM_EnvironmentStandard *env
 							omrobjectptr_t next = _extensions->accessBarrier->getContinuationLink(object);
 							gcEnv->_scavengerJavaStats._continuationCandidates += 1;
 
-							MM_ForwardedHeader forwardedHeader(object, compressed,5);
+							MM_ForwardedHeader forwardedHeader(object, compressed);
 							omrobjectptr_t forwardedPtr = object;
 							if (forwardedHeader.isForwardedPointer()) {
 								forwardedPtr = forwardedHeader.getForwardedObject();

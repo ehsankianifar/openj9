@@ -4636,10 +4636,9 @@ J9::Z::TreeEvaluator::generateHelperCallForVMNewEvaluators(TR::Node *node, TR::C
 TR::Register *
 J9::Z::TreeEvaluator::newObjectEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppressObject = std::getenv("TR_SuppressObject");
    TR::Compilation* comp = cg->comp();
    if (cg->comp()->suppressAllocationInlining() ||
-       TR::TreeEvaluator::requireHelperCallValueTypeAllocation(node, cg) || suppressObject)
+       TR::TreeEvaluator::requireHelperCallValueTypeAllocation(node, cg))
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
@@ -4651,8 +4650,7 @@ J9::Z::TreeEvaluator::newObjectEvaluator(TR::Node * node, TR::CodeGenerator * cg
 TR::Register *
 J9::Z::TreeEvaluator::newArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppressNewArray = std::getenv("TR_SuppressNewArray");
-   if (cg->comp()->suppressAllocationInlining() || suppressNewArray )
+   if (cg->comp()->suppressAllocationInlining())
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
@@ -4664,8 +4662,7 @@ J9::Z::TreeEvaluator::newArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
 TR::Register *
 J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppressANewArray = std::getenv("TR_SuppressANewArray");
-   if (cg->comp()->suppressAllocationInlining() || suppressANewArray)
+   if (cg->comp()->suppressAllocationInlining())
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
