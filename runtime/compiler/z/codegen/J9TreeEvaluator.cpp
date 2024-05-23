@@ -4992,6 +4992,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 TR::Register *
 J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
+   const char* suppressMultiArray = std::getenv("TR_SuppressMultiArray");
    TR::Compilation *comp = cg->comp();
    TR_ASSERT_FATAL(comp->target().is64Bit(), "multianewArrayEvaluator is only supported on 64-bit JVMs!");
 
@@ -5002,7 +5003,7 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    // Only generate inline code if nDims > 1
    uint32_t nDims = secondChild->get32bitIntegralValue();
-   if (nDims > 1)
+   if ((nDims > 1) && !suppressMultiArray)
       {
       return generateMultianewArrayWithInlineAllocators(node, cg);
       }
