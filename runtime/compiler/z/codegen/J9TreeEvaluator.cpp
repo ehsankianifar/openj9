@@ -10096,7 +10096,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       static char * disableInitClear = feGetEnv("TR_disableInitClear");
       static char * disableBatchClear = feGetEnv("TR_DisableBatchClear");
 
-      TR::Register * addressReg = NULL, * lengthReg = NULL, * shiftReg = NULL, * heapOrigValue = NULL;
+      TR::Register * addressReg = NULL, * lengthReg = NULL, * shiftReg = NULL;
       if (disableBatchClear && disableInitClear==NULL)
          {
          addressReg = cg->allocateRegister();
@@ -10109,19 +10109,13 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             conditions->addPostCondition(addressReg, TR::RealRegister::AssignAny);
             conditions->addPostCondition(shiftReg, TR::RealRegister::AssignAny);
             conditions->addPostCondition(lengthReg, TR::RealRegister::AssignAny);
-            conditions->addPostCondition(heapOrigValue, TR::RealRegister::AssignAny);
             }
-
          }
 
       if (isVariableLen)
          {
-         if (disableBatchClear && disableInitClear==NULL){
+         if (disableBatchClear && disableInitClear==NULL)
             iCursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, lengthReg, sizeReg, iCursor);
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::LD, node, heapOrigValue,
-                  generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-         }
-            
          if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
             {
             iCursor = generateRXInstruction(cg, TR::InstOpCode::getAddOpCode(), node, sizeReg,
@@ -10131,7 +10125,6 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             {
             iCursor = generateRXInstruction(cg, TR::InstOpCode::getAddOpCode(), node, sizeReg,
                   generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-            
             }
          }
       else
@@ -10142,11 +10135,8 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             iCursor = generateLoad32BitConstant(cg, node, allocSize, sizeReg, true, iCursor, conditions);
 
          if (disableBatchClear && disableInitClear==NULL)
-            {
             iCursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, lengthReg, sizeReg, iCursor);
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::LD, node, heapOrigValue,
-                  generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-            }
+
          if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
             {
             iCursor = generateRXInstruction(cg, TR::InstOpCode::getAddOpCode(), node, sizeReg,
@@ -10212,6 +10202,13 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                                    generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
          }
 
+
+      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
+                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
+      else
+         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
+                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
       TR::LabelSymbol * fillerRemLabel = generateLabelSymbol(cg);
       TR::LabelSymbol * doneLabel = generateLabelSymbol(cg);
 
@@ -10249,19 +10246,6 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          iCursor = generateEXDispatch(node, cg, lengthReg, shiftReg, iCursor);
          iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel);
          }
-      //EHSAN
-      if(heapOrigValue){
-         iCursor = generateRXInstruction(cg, TR::InstOpCode::getCmpLogicalOpCode(), node, heapOrigValue,
-                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-         iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNE, node, callLabel, iCursor);
-      }
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
-         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
-      else
-         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-
       cg->stopUsingRegister(addressReg);
       cg->stopUsingRegister(shiftReg);
       cg->stopUsingRegister(lengthReg);
