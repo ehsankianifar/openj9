@@ -4636,7 +4636,7 @@ J9::Z::TreeEvaluator::generateHelperCallForVMNewEvaluators(TR::Node *node, TR::C
 TR::Register *
 J9::Z::TreeEvaluator::newObjectEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppress = feGetEnv("EHSAN_SuppressObject");
+   const char* suppress = std::getenv("EHSAN_SuppressObject");
    TR::Compilation* comp = cg->comp();
    if (cg->comp()->suppressAllocationInlining() ||
        TR::TreeEvaluator::requireHelperCallValueTypeAllocation(node, cg) || suppress)
@@ -4651,7 +4651,7 @@ J9::Z::TreeEvaluator::newObjectEvaluator(TR::Node * node, TR::CodeGenerator * cg
 TR::Register *
 J9::Z::TreeEvaluator::newArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppress = feGetEnv("EHSAN_SuppressArray");
+   const char* suppress = std::getenv("EHSAN_SuppressArray");
    if (cg->comp()->suppressAllocationInlining() || suppress)
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
@@ -4664,7 +4664,7 @@ J9::Z::TreeEvaluator::newArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
 TR::Register *
 J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppress = feGetEnv("EHSAN_SuppressAArray");
+   const char* suppress = std::getenv("EHSAN_SuppressAArray");
    if (cg->comp()->suppressAllocationInlining() || suppress)
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
@@ -5021,7 +5021,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 TR::Register *
 J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   const char* suppressMultiArray = feGetEnv("EHSAN_SuppressMultiArray");
+   const char* suppressMultiArray = std::getenv("EHSAN_SuppressMultiArray");
    TR::Compilation *comp = cg->comp();
    TR_ASSERT_FATAL(comp->target().is64Bit(), "multianewArrayEvaluator is only supported on 64-bit JVMs!");
 
@@ -10202,17 +10202,13 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                                    generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
          }
 
-      const char * relocateSetHeap = feGetEnv("EHSAN_RelocateSetHeap");
 
-      if(relocateSetHeap==NULL)
-         {
-         if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                        generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
-         else
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                        generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-         }
+      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
+                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
+      else
+         iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
+                      generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
       TR::LabelSymbol * fillerRemLabel = generateLabelSymbol(cg);
       TR::LabelSymbol * doneLabel = generateLabelSymbol(cg);
 
@@ -10253,23 +10249,6 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       cg->stopUsingRegister(addressReg);
       cg->stopUsingRegister(shiftReg);
       cg->stopUsingRegister(lengthReg);
-      
-      if(relocateSetHeap==NULL)
-         {
-
-         const char * branchIfMismatch = feGetEnv("EHSAN_BranchIfMismatch");
-         if(branchIfMismatch){
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::getCmpLogicalOpCode(), node, resReg,
-                        generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-            iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNE, node, callLabel, iCursor);
-         }
-         if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                        generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
-         else
-            iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
-                        generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
-         }
 
       if (zeroReg != NULL)
          {
@@ -10519,7 +10498,7 @@ genInitArrayHeader(TR::Node * node, TR::Instruction *& iCursor, bool isVariableL
 
    static char * allocZeroArrayWithVM = feGetEnv("TR_VMALLOCZEROARRAY");
 
-   const char* suppress = feGetEnv("EHSAN_SuppressWriteZero");
+   const char* suppress = std::getenv("EHSAN_SuppressWriteZero");
    //write 0
    if(!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization() && allocZeroArrayWithVM == NULL && !suppress)
       iCursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, eNumReg,
