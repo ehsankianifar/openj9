@@ -10233,7 +10233,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, fillerRemLabel);
 
          // and to only get the right 8 bits (remainder)
-         iCursor = generateRIInstruction(cg, TR::InstOpCode::NILL, node, lengthReg, 0x00FF);
+         iCursor = generateRIInstruction(cg, TR::InstOpCode::NILF, node, lengthReg, 0x00FF);
          iCursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, lengthReg, -1);
          // branch to done if length < 0
 
