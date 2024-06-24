@@ -10084,7 +10084,7 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
 
 static void
 genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR::Register * enumReg, TR::Register * resReg,
-   TR::Register * zeroReg, TR::Register * dataSizeReg, TR::Register * sizeReg, TR::LabelSymbol * callLabel, int32_t allocSize,
+   TR::Register * dataSizeReg, TR::Register * sizeReg, TR::LabelSymbol * callLabel, int32_t allocSize,
    int32_t elementSize, TR::CodeGenerator * cg, TR::Register * litPoolBaseReg, TR::RegisterDependencyConditions * conditions,
    TR::Instruction *& firstBRCToOOL, TR::Instruction *& secondBRCToOOL, TR::LabelSymbol * exitOOLLabel = NULL)
    {
@@ -10383,11 +10383,6 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       cg->stopUsingRegister(addressReg);
       cg->stopUsingRegister(shiftReg);
       cg->stopUsingRegister(lengthReg);
-
-      if (zeroReg != NULL)
-         {
-         iCursor = generateRRInstruction(cg, TR::InstOpCode::getXORRegOpCode(), node, zeroReg, zeroReg, iCursor);
-         }
       }
    else
       {
@@ -10399,7 +10394,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
 
 static void
 genInitObjectHeader(TR::Node * node, TR::Instruction *& iCursor, TR_OpaqueClassBlock * classAddress, TR::Register * classReg, TR::Register * resReg,
-      TR::Register * zeroReg, TR::Register * temp1Reg, TR::Register * litPoolBaseReg,
+      TR::Register * temp1Reg, TR::Register * litPoolBaseReg,
       TR::RegisterDependencyConditions * conditions,
       TR::CodeGenerator * cg, TR::Register * enumReg = NULL, bool canUseIIHF = false)
    {
@@ -10600,7 +10595,7 @@ genAlignDoubleArray(TR::Node * node, TR::Instruction *& iCursor, bool isVariable
 
 static void
 genInitArrayHeader(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR_OpaqueClassBlock * classAddress, TR::Register * classReg,
-   TR::Register * resReg, TR::Register * zeroReg, TR::Register * eNumReg, TR::Register * dataSizeReg, TR::Register * temp1Reg,
+   TR::Register * resReg, TR::Register * eNumReg, TR::Register * dataSizeReg, TR::Register * temp1Reg,
    TR::Register * litPoolBaseReg, TR::RegisterDependencyConditions * conditions, TR::CodeGenerator * cg)
    {
    TR::Compilation *comp = cg->comp();
@@ -10617,7 +10612,7 @@ genInitArrayHeader(TR::Node * node, TR::Instruction *& iCursor, bool isVariableL
       {
       canUseIIHF = true;
       }
-   genInitObjectHeader(node, iCursor, classAddress, classReg, resReg, zeroReg, temp1Reg, litPoolBaseReg, conditions, cg, eNumReg, canUseIIHF);
+   genInitObjectHeader(node, iCursor, classAddress, classReg, resReg, temp1Reg, litPoolBaseReg, conditions, cg, eNumReg, canUseIIHF);
 
    // Store the array size
    if (canUseIIHF)
@@ -10645,7 +10640,6 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    TR_OpaqueClassBlock * classAddress = 0;
    TR::Register *classReg              = NULL;
    TR::Register *resReg                = NULL;
-   TR::Register *zeroReg               = NULL;
    TR::Register *litPoolBaseReg        = NULL;
    TR::Register *enumReg               = NULL;
    TR::Register *copyReg               = NULL;
@@ -10693,7 +10687,6 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    //   on if turned on as a runtime option)
    // 2.The JVM has to support the call - on z/OS, Modron GC is not enabled yet and so batch tlh clearing
    //   can not be enabled yet.
-   bool needZeroReg = !fej9->tlhHasBeenCleared();
 
    opCode = node->getOpCodeValue();
 
@@ -10796,8 +10789,6 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       temp1Reg = srm->findOrCreateScratchRegister();
       resReg = cg->allocateCollectedReferenceRegister();
 
-      if (needZeroReg)
-         zeroReg = srm->findOrCreateScratchRegister();
       conditions->addPostCondition(classReg, TR::RealRegister::AssignAny);
       if (enumReg)
          {
@@ -11003,9 +10994,8 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          traceMsg(comp,"enumReg = %s\n", enumReg->getRegisterName(comp));
          }
       // classReg and enumReg have to be intact still, in case we have to call the helper.
-      // On return, zeroReg is set to 0, and dataSizeReg is set to the size of data area if
-      // isVariableLen is true.
-      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, zeroReg, dataSizeReg, temp1Reg, callLabel, allocateSize, elementSize, cg,
+      // On return, dataSizeReg is set to the size of data area if isVariableLen is true.
+      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, dataSizeReg, temp1Reg, callLabel, allocateSize, elementSize, cg,
             litPoolBaseReg, conditions, firstBRCToOOL, secondBRCToOOL, exitOOLLabel);
 
       //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -11046,10 +11036,10 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       if (isArray)
          {
          if ( comp->compileRelocatableCode() && opCode == TR::anewarray)
-         genInitArrayHeader(node, iCursor, isVariableLen, classAddress, classReg, resReg, zeroReg,
+         genInitArrayHeader(node, iCursor, isVariableLen, classAddress, classReg, resReg,
                enumReg, dataSizeReg, temp1Reg, litPoolBaseReg, conditions, cg);
          else
-         genInitArrayHeader(node, iCursor, isVariableLen, classAddress, NULL, resReg, zeroReg,
+         genInitArrayHeader(node, iCursor, isVariableLen, classAddress, NULL, resReg,
                enumReg, dataSizeReg, temp1Reg, litPoolBaseReg, conditions, cg);
 
 #ifdef J9VM_GC_ENABLE_SPARSE_HEAP_ALLOCATION
@@ -11148,7 +11138,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          }
       else
          {
-         genInitObjectHeader(node, iCursor, classAddress, classReg , resReg, zeroReg, temp1Reg, litPoolBaseReg, conditions, cg);
+         genInitObjectHeader(node, iCursor, classAddress, classReg , resReg, temp1Reg, litPoolBaseReg, conditions, cg);
          }
 
       TR_ASSERT((fej9->tlhHasBeenCleared() || J9JIT_TOSS_CODE), "");
