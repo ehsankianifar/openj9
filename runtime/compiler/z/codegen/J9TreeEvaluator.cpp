@@ -10331,7 +10331,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, exrlTargetLabel);
                iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(addressReg, 0, cg), generateS390MemoryReference(addressReg, 0, cg), iCursor);
                iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, fillerRemLabel);
-               iCursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, lengthReg, exrlTargetLabel);
+               iCursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, tmp, exrlTargetLabel);
                }
             srm->reclaimScratchRegister(tmp);
             srm->reclaimScratchRegister(addressReg);
