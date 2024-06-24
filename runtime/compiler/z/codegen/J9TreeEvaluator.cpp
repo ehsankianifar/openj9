@@ -4835,7 +4835,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    generateRXInstruction(cg, use64BitClasses ? TR::InstOpCode::STG : TR::InstOpCode::ST, node, classReg, generateS390MemoryReference(targetReg, TR::Compiler->om.offsetOfObjectVftField(), cg));
 
-   static char * disableBatchClear = feGetEnv("TR_DisableBatchClear");
+   static char * disableBatchClear = "true";//feGetEnv("TR_DisableBatchClear");
    // If batch clear is disabled, set element's size and mustBeZero fields to 0
    if (disableBatchClear)
       {
@@ -10169,7 +10169,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          }
 
       // Zero initialize newly allocated array or object if batch clearing is disabled and node can not skip zero initialization.
-      static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
+      static bool disableBatchClear = true;//feGetEnv("TR_DisableBatchClear") != NULL;
       bool inlineZeroInitialization = disableBatchClear && !node->canSkipZeroInitialization();
       if (inlineZeroInitialization && (isVariableLen || isLargeConstantLen))
          {
