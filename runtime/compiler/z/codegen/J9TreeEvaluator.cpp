@@ -10078,7 +10078,7 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
 
 static void
 genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR::Register * enumReg, TR::Register * resReg,
-   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, TR::LabelSymbol * callLabel, int32_t allocSize,
+   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, J9Class * clazz, TR::LabelSymbol * callLabel, int32_t allocSize,
    int32_t elementSize, TR::CodeGenerator * cg, TR::Register * litPoolBaseReg, TR::RegisterDependencyConditions * conditions,
    TR::Instruction *& firstBRCToOOL, TR::Instruction *& secondBRCToOOL, TR::LabelSymbol * exitOOLLabel = NULL)
    {
@@ -10093,7 +10093,8 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       int alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
 
       // Using XC and MVx displacement as the threshold for large constant size.
-      bool isLargeConstantLen = !isVariableLen && (allocSize >= (1 << 12));
+      // With XC we can clear 255 bytes on top of 12 bit displacement.
+      bool isLargeConstantLen = !isVariableLen && (allocSize >= ((1 << 12) + 255));
 
       // Extra registers needed to handle variable length alloc.
       TR::Register * tmp = NULL;
@@ -10338,30 +10339,38 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             }
          else
             {
-            int32_t displacement = 0;
-            while (allocSize > 256)
+            if (node->getOpCodeValue() == TR::New && clazz != NULL && clazz->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
                {
-               iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
-               displacement += 256;
-               allocSize -=256;
+               // There is a minimum object size of 16 bytes. if the actuall object body is less than 8 bytes, we can zero that part with a simple MVGHI instruction.
+               iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, (int32_t)fej9->getObjectHeaderSizeInBytes(), cg), 0, iCursor);
                }
-            switch (allocSize)
+            else
                {
-               case 1:
-                  iCursor = generateSIInstruction(cg, TR::InstOpCode::MVI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
-                  break;
-               case 2:
-                  iCursor = generateSILInstruction(cg, TR::InstOpCode::MVHHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
-                  break;
-               case 4:
-                  iCursor = generateSILInstruction(cg, TR::InstOpCode::MVHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
-                  break;
-               case 8:
-                  iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
-                  break;
-               default:
-                  iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, (allocSize - 1), generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
-                  break;
+               int32_t displacement = 0;
+               while (allocSize > 256)
+                  {
+                  iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
+                  displacement += 256;
+                  allocSize -=256;
+                  }
+               switch (allocSize)
+                  {
+                  case 1:
+                     iCursor = generateSIInstruction(cg, TR::InstOpCode::MVI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
+                     break;
+                  case 2:
+                     iCursor = generateSILInstruction(cg, TR::InstOpCode::MVHHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
+                     break;
+                  case 4:
+                     iCursor = generateSILInstruction(cg, TR::InstOpCode::MVHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
+                     break;
+                  case 8:
+                     iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, displacement, cg), 0, iCursor);
+                     break;
+                  default:
+                     iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, (allocSize - 1), generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
+                     break;
+                  }
                }
             }
          }
@@ -10954,7 +10963,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          traceMsg(comp,"enumReg = %s\n", enumReg->getRegisterName(comp));
          }
       // classReg and enumReg have to be intact still, in case we have to call the helper.
-      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, callLabel, allocateSize, elementSize, cg,
+      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, (J9Class *)classAddress, callLabel, allocateSize, elementSize, cg,
             litPoolBaseReg, conditions, firstBRCToOOL, secondBRCToOOL, exitOOLLabel);
 
       srm->addScratchRegistersToDependencyList(conditions);
