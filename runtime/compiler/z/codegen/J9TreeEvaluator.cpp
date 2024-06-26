@@ -10374,6 +10374,11 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                allocSize -= displacement;
                }
 
+            if (allocSize < 9)
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/small"), 1, TR::DebugCounter::Undetermined);
+            else
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/Large"), 1, TR::DebugCounter::Undetermined);
+
             while (allocSize > 256)
                {
                iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
