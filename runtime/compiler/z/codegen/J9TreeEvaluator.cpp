@@ -10078,7 +10078,7 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
 
 static void
 genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR::Register * enumReg, TR::Register * resReg,
-   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, TR::LabelSymbol * callLabel, int32_t allocSize,
+   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, TR_OpaqueClassBlock * classAddress, TR::LabelSymbol * callLabel, int32_t allocSize,
    int32_t elementSize, TR::CodeGenerator * cg, TR::Register * litPoolBaseReg, TR::RegisterDependencyConditions * conditions,
    TR::Instruction *& firstBRCToOOL, TR::Instruction *& secondBRCToOOL, TR::LabelSymbol * exitOOLLabel = NULL)
    {
@@ -10088,9 +10088,8 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       {
       TR::Register *metaReg = cg->getMethodMetaDataRealRegister();
 
-      // bool sizeInReg = (isVariableLen || (allocSize > MAX_IMMEDIATE_VAL));
-
       int alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
+      int32_t alignedAllocateSize = (allocSize + alignmentConstant - 1) & (-alignmentConstant);
 
       // Using XC and MVx displacement as the threshold for large constant size.
       bool isLargeConstantLen = !isVariableLen && (allocSize >= (1 << 12));
@@ -10164,9 +10163,9 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          if (!isVariableLen)
          {
          if (comp->target().is64Bit())
-            iCursor = genLoadLongConstant(cg, node, allocSize, sizeReg, iCursor, conditions);
+            iCursor = genLoadLongConstant(cg, node, alignedAllocateSize, sizeReg, iCursor, conditions);
          else
-            iCursor = generateLoad32BitConstant(cg, node, allocSize, sizeReg, true, iCursor, conditions);
+            iCursor = generateLoad32BitConstant(cg, node, alignedAllocateSize, sizeReg, true, iCursor, conditions);
          }
 
       // Zero initialize newly allocated array or object if batch clearing is disabled and node can not skip zero initialization.
@@ -10202,7 +10201,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                generateS390MemoryReference(metaReg, offsetof(J9VMThread, heapAlloc), cg), iCursor);
          }
 
-      if (allocSize > cg->getMaxObjectSizeGuaranteedNotToOverflow())
+      if (alignedAllocateSize > cg->getMaxObjectSizeGuaranteedNotToOverflow())
          {
          iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BO, node, callLabel, iCursor);
          if(!firstBRCToOOL)
@@ -10339,6 +10338,42 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          else
             {
             int32_t displacement = 0;
+
+            // We can skip cleaning the header and added space to meet minimum size requirement.
+            if (node->getOpCodeValue() == TR::New)
+               {
+               displacement = (int32_t)fej9->getObjectHeaderSizeInBytes();
+               allocSize = ((J9Class *)classAddress)->totalInstanceSize;
+               }
+            else if (node->getOpCodeValue() == TR::newarray)
+               {
+               bool generateArraylets = comp->generateArraylets();
+               // This is the maximum size we can safely skip zeroing. In case of discontiguous array, the 'size' field must be zero.
+               displacement = (int32_t)TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
+               if (!generateArraylets)
+                  {
+                  int32_t actualSize = node->getFirstChild()->getInt() * elementSize;
+                  int32_t wiggleRoom = allocSize - displacement - actualSize;
+                  if (actualSize == 3 && wiggleRoom > 0)
+                     actualSize = 4;
+                  else if (actualSize == 5 && wiggleRoom > 2)
+                     actualSize = 8;
+                  else if (actualSize == 6 && wiggleRoom > 1)
+                     actualSize = 8;
+                  else if (actualSize == 7 && wiggleRoom > 0)
+                     actualSize = 8;
+
+                  if(actualSize > 0)
+                     allocSize = actualSize;
+                  }
+               }
+            else
+               {
+               // This is the maximum size we can safely skip zeroing. In case of discontiguous array, the 'size' field must be zero.
+               displacement = (int32_t)TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
+               allocSize -= displacement;
+               }
+
             while (allocSize > 256)
                {
                iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(resReg, displacement, cg), generateS390MemoryReference(resReg, displacement, cg), iCursor);
@@ -10793,11 +10828,8 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
 
       if (isVariableLen)
          allocateSize += dataBegin;
-      else
-         allocateSize = (allocateSize + alignmentConstant - 1) & (-alignmentConstant);
 
       TR::LabelSymbol * exitOOLLabel = NULL;
-
 
       if (isVariableLen)
          {
@@ -10954,7 +10986,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          traceMsg(comp,"enumReg = %s\n", enumReg->getRegisterName(comp));
          }
       // classReg and enumReg have to be intact still, in case we have to call the helper.
-      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, callLabel, allocateSize, elementSize, cg,
+      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, classAddress, callLabel, allocateSize, elementSize, cg,
             litPoolBaseReg, conditions, firstBRCToOOL, secondBRCToOOL, exitOOLLabel);
 
       srm->addScratchRegistersToDependencyList(conditions);
