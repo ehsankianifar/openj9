@@ -10303,6 +10303,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             // Zero the remainder.
             if(isLargeConstantLen)
                {
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/largeConst"), 1, TR::DebugCounter::Undetermined);
                // The remainder is a constant value between 1 and 256 for large constant length objects and displacement is 0.
                allocSize = ((allocSize - 1) % 256) + 1;
                switch (allocSize)
@@ -10326,6 +10327,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
                }
             else
                {
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/variable"), 1, TR::DebugCounter::Undetermined);
                TR::LabelSymbol *exrlTargetLabel = generateLabelSymbol(cg);
                iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, fillerRemLabel);
                iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, exrlTargetLabel);
@@ -10341,11 +10343,13 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             static bool activateSmall = feGetEnv("EHSAN_ACTIVATE") != NULL;
             if (activateSmall && node->getOpCodeValue() == TR::New && classAddress != NULL && ((J9Class *)classAddress)->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
                {
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/SmallConst"), 1, TR::DebugCounter::Undetermined);
                // There is a minimum object size of 16 bytes. if the actuall object body is less than 8 bytes, we can zero that part with a simple MVGHI instruction.
                iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, (int32_t)fej9->getObjectHeaderSizeInBytes(), cg), 0, iCursor);
                }
             else
                {
+               cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "initNew/Const"), 1, TR::DebugCounter::Undetermined);
                int32_t displacement = 0;
                while (allocSize > 256)
                   {
