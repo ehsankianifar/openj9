@@ -10078,7 +10078,7 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
 
 static void
 genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR::Register * enumReg, TR::Register * resReg,
-   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, J9Class * clazz, TR::LabelSymbol * callLabel, int32_t allocSize,
+   TR::Register * sizeReg, TR_S390ScratchRegisterManager *srm, TR_OpaqueClassBlock * classAddress, TR::LabelSymbol * callLabel, int32_t allocSize,
    int32_t elementSize, TR::CodeGenerator * cg, TR::Register * litPoolBaseReg, TR::RegisterDependencyConditions * conditions,
    TR::Instruction *& firstBRCToOOL, TR::Instruction *& secondBRCToOOL, TR::LabelSymbol * exitOOLLabel = NULL)
    {
@@ -10338,7 +10338,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             }
          else
             {
-            if (node->getOpCodeValue() == TR::New && clazz != NULL && clazz->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
+            if (node->getOpCodeValue() == TR::New && classAddress != NULL && ((J9Class *)classAddress)->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
                {
                // There is a minimum object size of 16 bytes. if the actuall object body is less than 8 bytes, we can zero that part with a simple MVGHI instruction.
                iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, (int32_t)fej9->getObjectHeaderSizeInBytes(), cg), 0, iCursor);
@@ -10962,7 +10962,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          traceMsg(comp,"enumReg = %s\n", enumReg->getRegisterName(comp));
          }
       // classReg and enumReg have to be intact still, in case we have to call the helper.
-      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, (J9Class *)classAddress, callLabel, allocateSize, elementSize, cg,
+      genHeapAlloc(node, iCursor, isVariableLen, enumReg, resReg, temp1Reg, srm, classAddress, callLabel, allocateSize, elementSize, cg,
             litPoolBaseReg, conditions, firstBRCToOOL, secondBRCToOOL, exitOOLLabel);
 
       srm->addScratchRegistersToDependencyList(conditions);
