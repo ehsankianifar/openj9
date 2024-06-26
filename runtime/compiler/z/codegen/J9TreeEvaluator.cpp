@@ -10338,7 +10338,8 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             }
          else
             {
-            if (node->getOpCodeValue() == TR::New && classAddress != NULL && ((J9Class *)classAddress)->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
+            static bool activateSmall = feGetEnv("EHSAN_ACTIVATE") != NULL;
+            if (activateSmall && node->getOpCodeValue() == TR::New && classAddress != NULL && ((J9Class *)classAddress)->totalInstanceSize <= 8 && (allocSize - (int32_t)fej9->getObjectHeaderSizeInBytes()) >= 8)
                {
                // There is a minimum object size of 16 bytes. if the actuall object body is less than 8 bytes, we can zero that part with a simple MVGHI instruction.
                iCursor = generateSILInstruction(cg, TR::InstOpCode::MVGHI, node, generateS390MemoryReference(resReg, (int32_t)fej9->getObjectHeaderSizeInBytes(), cg), 0, iCursor);
