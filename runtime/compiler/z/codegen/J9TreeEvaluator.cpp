@@ -10093,8 +10093,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       int alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
 
       // Using XC and MVx displacement as the threshold for large constant size.
-      // With XC we can clear 255 bytes on top of 12 bit displacement.
-      bool isLargeConstantLen = !isVariableLen && (allocSize >= ((1 << 12) + 255));
+      bool isLargeConstantLen = !isVariableLen && (allocSize >= (1 << 12));
 
       // Extra registers needed to handle variable length alloc.
       TR::Register * tmp = NULL;
