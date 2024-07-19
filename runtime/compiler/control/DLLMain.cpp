@@ -360,7 +360,7 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
             static char *enableBatchClear = feGetEnv2("TR_EnableBatchClear", (void *)vm);
 
 #else //ppc and s390
-            static char *disableBatchClear = feGetEnv2("TR_DisableBatchClear", (void *)vm);
+            static char *disableBatchClear = "true";
 #ifdef TR_HOST_POWER
             static char *disableDualTLH   = feGetEnv2("TR_DisableDualTLH", (void *)vm);
 
