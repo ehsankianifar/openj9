@@ -10261,7 +10261,9 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
 
       // Zero initialize newly allocated array or object if batch clearing is disabled and node can not skip zero initialization.
       static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
-      bool inlineZeroInitialization = disableBatchClear && !node->canSkipZeroInitialization();
+      static bool hybridTlh = feGetEnv("TR_HybridTlh") != NULL;
+      bool allocateFromNonZeroTlh = !comp->getOption(TR_DisableDualTLH) && (node->canSkipZeroInitialization() || (!isVariableLen && hybridTlh));
+      bool inlineZeroInitialization = !node->canSkipZeroInitialization() && (disableBatchClear || allocateFromNonZeroTlh);
 
       if (!isVariableLen)
          {
@@ -10292,8 +10294,9 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             iCursor = generateRIInstruction(cg, TR::InstOpCode::getAddHalfWordImmOpCode(), node, lengthReg, -1);
             }
          }
+      
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          {
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getAddOpCode(), node, sizeReg,
                generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
@@ -10317,7 +10320,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             }
          }
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          {
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getCmpLogicalOpCode(), node, sizeReg,
                             generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapTop), cg), iCursor);
@@ -10357,7 +10360,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          }
 
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
                       generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
       else
@@ -10610,7 +10613,7 @@ genInitObjectHeader(TR::Node * node, TR::Instruction *& iCursor, TR_OpaqueClassB
       else
          {
          // If the object flags cannot be determined at compile time, we add a load for it.
-         if(!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+         if(allocateFromNonZeroTlh)
             iCursor = generateRXInstruction(cg, TR::InstOpCode::getLoadOpCode(), node, temp1Reg,
                   generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroAllocateThreadLocalHeap.objectFlags), cg), iCursor);
          else
