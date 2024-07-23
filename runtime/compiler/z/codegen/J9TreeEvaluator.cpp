@@ -10171,11 +10171,11 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
    }
 
 static void
-genMemoryZeroingLoop(TR::CodeGenerator* cg, TR::Node* node, TR::Instruction*& iCursor, TR::Register * addressReg, TR::Register * loopIterRegsiter)
+genMemoryZeroingLoop(TR::CodeGenerator* cg, TR::Node* node, TR::Instruction*& iCursor, TR::Register * addressReg, TR::Register * loopIterRegsiter, int32_t displacement = 0)
    {
    TR::LabelSymbol * loopStartLabel = generateLabelSymbol(cg);
    iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, loopStartLabel);
-   iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(addressReg, 0, cg), generateS390MemoryReference(addressReg, 0, cg), iCursor);
+   iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(addressReg, displacement, cg), generateS390MemoryReference(addressReg, displacement, cg), iCursor);
    iCursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, addressReg, generateS390MemoryReference(addressReg, 256, cg), iCursor);
    iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, loopIterRegsiter, loopStartLabel);
    }
@@ -10241,6 +10241,12 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
       //   integer arithmetic, checking carry bit is enough to detect it.
       //   For variable length array, we did an up-front check already.
 
+      // Zero initialize newly allocated array or object if batch clearing is disabled and node can not skip zero initialization.
+      static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
+      static bool hybridTlh = feGetEnv("TR_HybridTlh") != NULL;
+      bool allocateFromNonZeroTlh = !comp->getOption(TR_DisableDualTLH) && (node->canSkipZeroInitialization() || (!isVariableLen && hybridTlh));
+      bool inlineZeroInitialization = !node->canSkipZeroInitialization() && (disableBatchClear || allocateFromNonZeroTlh);
+
       if (!isVariableLen)
          {
          if (comp->target().is64Bit())
@@ -10249,9 +10255,6 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             iCursor = generateLoad32BitConstant(cg, node, allocSize, sizeReg, false, iCursor, conditions);
          }
 
-      // Zero initialize newly allocated array or object if batch clearing is disabled and node can not skip zero initialization.
-      static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
-      bool inlineZeroInitialization = disableBatchClear && !node->canSkipZeroInitialization();
       TR::Register *lengthReg = NULL;
       if (inlineZeroInitialization && isVariableLen)
          {
@@ -10269,8 +10272,9 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             iCursor = generateRIInstruction(cg, TR::InstOpCode::getAddHalfWordImmOpCode(), node, lengthReg, -1);
             }
          }
+      
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          {
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getAddOpCode(), node, sizeReg,
                generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
@@ -10294,7 +10298,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
             }
          }
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          {
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getCmpLogicalOpCode(), node, sizeReg,
                             generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapTop), cg), iCursor);
@@ -10334,7 +10338,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
          }
 
 
-      if (!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      if (allocateFromNonZeroTlh)
          iCursor = generateRXInstruction(cg, TR::InstOpCode::getStoreOpCode(), node, sizeReg,
                       generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroHeapAlloc), cg), iCursor);
       else
@@ -10556,7 +10560,7 @@ genInitObjectHeader(TR::Node * node, TR::Instruction *& iCursor, TR_OpaqueClassB
       else
          {
          // If the object flags cannot be determined at compile time, we add a load for it.
-         if(!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+         if(allocateFromNonZeroTlh)
             iCursor = generateRXInstruction(cg, TR::InstOpCode::getLoadOpCode(), node, temp1Reg,
                   generateS390MemoryReference(metaReg, offsetof(J9VMThread, nonZeroAllocateThreadLocalHeap.objectFlags), cg), iCursor);
          else
@@ -10949,7 +10953,9 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       //If we overflow the nonZeroTLH, set the destination to the right VM runtime helper (eg jitNewObjectNoZeroInit, etc...)
       //The zeroed-TLH versions have their correct destinations already setup in TR_ByteCodeIlGenerator::genNew, TR_ByteCodeIlGenerator::genNewArray, TR_ByteCodeIlGenerator::genANewArray
       //To retrieve the destination node->getSymbolReference() is used below after genHeapAlloc.
-      if(!comp->getOption(TR_DisableDualTLH) && node->canSkipZeroInitialization())
+      static bool hybridTlh = feGetEnv("TR_HybridTlh") != NULL;
+      bool allocateFromNonZeroTlh = !comp->getOption(TR_DisableDualTLH) && (node->canSkipZeroInitialization() || (!isVariableLen && hybridTlh));
+      if(allocateFromNonZeroTlh)
          {
          // For value types, the backout path should call jitNewValue helper call which is set up before code gen
          if ((node->getOpCodeValue() == TR::New)
@@ -11003,6 +11009,37 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       /* Copying the return value from the temporary register to the actual register that is returned */
       /* Generating the branch to jump back to the merge label:
        * BRCL    J(0xf), Label L00YZ, labelTargetAddr=0xZZZZZZZZ*/
+      if (allocateFromNonZeroTlh && !node->canSkipZeroInitialization())
+         {
+         int32_t zeroingSize = allocateSize - dataBegin;
+         int32_t displacement = dataBegin;
+         TR::Register * addressReg = resReg;
+         int32_t loopIterCount = zeroingSize / 256;
+         int32_t numberOfResidueBytes = zeroingSize % 256;
+         if (loopIterCount > 2)
+            {
+            addressReg = dataSizeReg;
+            TR::Register * loopIterRegsiter = enumReg;
+            if (NULL == loopIterRegsiter)
+               loopIterRegsiter = classReg;
+            generateLoad32BitConstant(cg, node, loopIterCount, loopIterRegsiter, false);
+            TR::Instruction * cursor2 = generateRRInstruction(cg, TR::InstOpCode::getLoadRegOpCode(), node, addressReg, resReg);
+            genMemoryZeroingLoop(cg, node, cursor2, addressReg, loopIterRegsiter, displacement);
+            }
+         else
+            {
+            while (loopIterCount > 0)
+               {
+               generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(addressReg, displacement, cg), generateS390MemoryReference(addressReg, displacement, cg));
+               displacement += 256;
+               loopIterCount--;
+               }
+            }
+         if (numberOfResidueBytes > 0)
+            {
+            generateSS1Instruction(cg, TR::InstOpCode::XC, node, zeroingSize - 1, generateS390MemoryReference(addressReg, displacement, cg), generateS390MemoryReference(addressReg, displacement, cg));
+            }
+         }
       generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, cFlowRegionEnd);
       heapAllocOOL->swapInstructionListsWithCompilation();
       //////////////////////////////////////////////////////////////////////////////////////////////////////

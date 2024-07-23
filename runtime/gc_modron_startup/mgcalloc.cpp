@@ -99,7 +99,6 @@ J9AllocateObjectNoGC(J9VMThread *vmThread, J9Class *clazz, uintptr_t allocateFla
 	Assert_MM_true(allocateFlags & OMR_GC_ALLOCATE_OBJECT_INSTRUMENTABLE);
 	// TODO: respect or reject tenured flag?
 	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_TENURED);
-	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH);
 
 	J9Object *objectPtr = NULL;
 	
@@ -348,9 +347,6 @@ J9AllocateIndexableObjectNoGC(J9VMThread *vmThread, J9Class *clazz, uint32_t num
 	Assert_MM_true(allocateFlags & OMR_GC_ALLOCATE_OBJECT_INSTRUMENTABLE);
 	// TODO: respect or reject tenured flag?
 	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_TENURED);
-	if (OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH == (allocateFlags & OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH)) {
-		Assert_MM_true(GC_ObjectModel::SCAN_PRIMITIVE_ARRAY_OBJECT == extensions->objectModel.getScanType(clazz));
-	}
 
 	J9Object *objectPtr = NULL;
 	if(!traceObjectCheck(vmThread)){
@@ -410,7 +406,6 @@ J9AllocateObject(J9VMThread *vmThread, J9Class *clazz, uintptr_t allocateFlags)
 	}	
 #endif /* J9VM_GC_THREAD_LOCAL_HEAP */	
 	
-	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH);
 	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_NO_GC);
 
 	J9Object *objectPtr = NULL;
@@ -574,9 +569,6 @@ J9AllocateIndexableObject(J9VMThread *vmThread, J9Class *clazz, uint32_t numberO
 	VM_VMAccess::setPublicFlags(vmThread, J9_PUBLIC_FLAGS_NOT_AT_SAFE_POINT);
 
 	Assert_MM_false(allocateFlags & OMR_GC_ALLOCATE_OBJECT_NO_GC);
-	if (OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH == (allocateFlags & OMR_GC_ALLOCATE_OBJECT_NON_ZERO_TLH)) {
-		Assert_MM_true(GC_ObjectModel::SCAN_PRIMITIVE_ARRAY_OBJECT == extensions->objectModel.getScanType(clazz));
-	}
 
 #if defined(J9VM_GC_THREAD_LOCAL_HEAP)
 	if (!env->isInlineTLHAllocateEnabled()) {
