@@ -12079,9 +12079,17 @@ J9::X86::TreeEvaluator::directCallEvaluator(TR::Node *node, TR::CodeGenerator *c
       case TR::java_lang_Thread_onSpinWait:
          {
          static char *disableOSW = feGetEnv("TR_noPauseOnSpinWait");
+         static const bool switchNop = feGetEnv("SwitchPauseWithNop") != NULL;
          if (!disableOSW)
             {
-            generateInstruction(TR::InstOpCode::PAUSE, node, cg);
+            if (switchNop)
+               {
+               generateInstruction(TR::InstOpCode::vgnop, node, cg);
+               } 
+            else
+               {
+               generateInstruction(TR::InstOpCode::PAUSE, node, cg);
+               }  
 
             static char *printIt = feGetEnv("TR_showPauseOnSpinWait");
             if (printIt && comp->getOption(TR_TraceCG))
