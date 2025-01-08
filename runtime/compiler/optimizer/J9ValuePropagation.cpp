@@ -1786,7 +1786,6 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             TR_OpaqueClassBlock *thisClass = classChildConstraint->getClass();
             if (comp()->fej9()->isClassArray(thisClass))
                {
-               
                TR_OpaqueClassBlock *arrayComponentClass = comp()->fej9()->getComponentClassFromArrayClass(thisClass);
                // J9Class pointer introduced by the opt has to be remembered under AOT
                if (!arrayComponentClass)
@@ -1798,7 +1797,6 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
 
                if (!performTransformation(comp(), "%sTransforming %s on node %p to an aloadi\n", OPT_DETAILS, signature, node))
                   break;
-               printf("EHSAN A %p\n", node);
 
                anchorAllChildren(node, _curTree);
                node->removeAllChildren();
@@ -1841,7 +1839,6 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             {
             if (!performTransformation(comp(), "%sTransforming %s on node %p to load component type inline\n", OPT_DETAILS, signature, node))
                break;
-            
 
             // Consider two cases:
             //
@@ -1858,13 +1855,11 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             if ((symRef != NULL) && (symRef == jlcFromClassSymRef))
                {
                classOperand = classChild->getFirstChild();
-               printf("EHSAN B %p\n", node);
                }
             else
                {
                classOperand = TR::Node::createWithSymRef(TR::aloadi, 1, 1, classChild,
                                  comp()->getSymRefTab()->findOrCreateClassFromJavaLangClassSymbolRef());
-               printf("EHSAN C %p\n", node);
                }
 
             TR::Node *loadComponentTypeNode = comp()->fej9()->loadArrayClassComponentType(classOperand);
@@ -1920,7 +1915,6 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
                static_assert(sizeof(J9Class) >= offsetof(J9ArrayClass, componentType)
                                                    + sizeof(J9ArrayClass::componentType),
                              "The J9ArrayClass.componentType field must be within the size of J9Class");
-               printf("EHSAN D %p\n", node);
 
                TR::Node *testIsArrayClassNode =
                      TR::Node::create(node, TR::icmpne, 2,
@@ -1947,9 +1941,8 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
                //
                jlcOfComponentTypeNode =
                   TR::Node::createWithSymRef(node, TR::aloadi, 1, loadComponentTypeNode, jlcFromClassSymRef);
-               printf("EHSAN E %p\n", node);
                }
-            printf("EHSAN N=%p J=%p C=%p\n", node, jlcOfComponentTypeNode, classChild);
+
             transformCallToNodeDelayedTransformations(_curTree, jlcOfComponentTypeNode, false);
             return;
             }
@@ -3256,7 +3249,6 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
       traceMsg(comp(), "Doing delayed call transformation on call node n%dn\n", callNode->getGlobalIndex());
-      
 
       if (!performTransformation(comp(), "%sTransforming call node %p on tree %p to node %p\n", OPT_DETAILS, callNode, callTree, result))
          break;
@@ -3264,12 +3256,10 @@ J9::ValuePropagation::doDelayedTransformations()
       if (it->_requiresHCRGuard)
          {
          transformCallToNodeWithHCRGuard(callTree, result);
-         printf("EHSAN X %p\n", callNode);
          }
       else
          {
          TR::TransformUtil::transformCallNodeToPassThrough(this, callNode, callTree, result);
-         printf("EHSAN W N=%p R=%p\n", callNode, result);
          }
       }
    _callsToBeFoldedToNode.deleteAll();
