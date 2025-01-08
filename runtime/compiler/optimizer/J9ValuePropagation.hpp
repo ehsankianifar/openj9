@@ -371,6 +371,7 @@ class ValuePropagation : public OMR::ValuePropagation
    TR::VP_BCDSign **_bcdSignConstraints;
    List<TreeNodeResultPair> _callsToBeFoldedToNode;
    List<TR_TreeTopNodePair> _offHeapCopyMemory;
+   TR::Node *_ehsanPrevious = NULL;
 
    struct ValueTypesHelperCallTransform;
    struct ObjectComparisonHelperCallTransform;
