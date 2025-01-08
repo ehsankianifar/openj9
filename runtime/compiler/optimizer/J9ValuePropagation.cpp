@@ -1942,7 +1942,7 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
                jlcOfComponentTypeNode =
                   TR::Node::createWithSymRef(node, TR::aloadi, 1, loadComponentTypeNode, jlcFromClassSymRef);
                }
-            TR_ASSERT_FATAL(_ehsanPrevious != node, "Getting same transformation for the node!\n");
+            TR_ASSERT_FATAL(_ehsanPrevious != node, "Getting same transformation for the node. current=%p previous=%p!\n", node, _ehsanPrevious);
             _ehsanPrevious = node;
             transformCallToNodeDelayedTransformations(_curTree, jlcOfComponentTypeNode, false);
             return;
