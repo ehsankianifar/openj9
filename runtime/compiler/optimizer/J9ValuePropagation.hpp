@@ -372,6 +372,11 @@ class ValuePropagation : public OMR::ValuePropagation
    List<TreeNodeResultPair> _callsToBeFoldedToNode;
    List<TR_TreeTopNodePair> _offHeapCopyMemory;
    TR::Node *_ehsanPrevious = NULL;
+   TR::Node *_ehsanPreviousChild = NULL;
+   TR::Node *_ehsanPreviousChildOfChild = NULL;
+   char *_ehsanPreviousChildOpcode = "NULL"
+   char *_ehsanPreviousChildOfChildOpcode = "NULL"
+   TR::TreeTop *_ehsanPreviousTreeTop = NULL;
 
    struct ValueTypesHelperCallTransform;
    struct ObjectComparisonHelperCallTransform;

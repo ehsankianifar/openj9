@@ -1769,6 +1769,13 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
       case TR::java_lang_Class_getComponentType:
          {
          TR::Node *classChild = node->getLastChild();
+         TR::Node *childOfChild = classChild->getFirstChild();
+         char *childOpCode = classChild->getOpCode().getName();
+         char *childOfChildOpCode = "NULL";
+         if(childOfChild)
+            childOfChildOpCode = childOfChild->getOpCode().getName();
+
+
          bool classChildGlobal;
          TR::VPConstraint *classChildConstraint = getConstraint(classChild, classChildGlobal);
          bool isNonNullJavaLangClass = classChildConstraint
@@ -1947,8 +1954,22 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             if(assertSecondTime)
                {
                TR_ASSERT_FATAL(_ehsanPrevious != node, "Getting same transformation for the node. current=%p previous=%p!\n", node, _ehsanPrevious);
-               _ehsanPrevious = node;
                }
+
+            if(_ehsanPrevious == node)
+               {
+               printf("Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s *** Np=%p Cp=%p CCp=%p Tp=%p Cop=%s CCop=%s", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, _ehsanPrevious, _ehsanPreviousChild, _ehsanPreviousChildOfChild, _ehsanPreviousTreeTop, _ehsanPreviousChildOpcode, _ehsanPreviousChildOfChildOpcode);
+               }
+            _ehsanPrevious = node;
+            _ehsanPreviousChild = classChild;
+            _ehsanPreviousChildOfChild = childOfChild;
+            _ehsanPreviousChildOpcode = childOpCode;
+            _ehsanPreviousChildOfChildOpcode = childOfChildOpCode;
+            _ehsanPreviousTreeTop = _curTree;
+               
+
+
+               
             if(assertFirstTimeTime)
                TR_ASSERT_FATAL(false, "Failing on Node assertion. current=%p !\n", node);
             transformCallToNodeDelayedTransformations(_curTree, jlcOfComponentTypeNode, false);
@@ -3256,6 +3277,13 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::TreeTop *callTree = it->_tree;
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
+      TR::Node * child = callNode->getFirstChild();
+      char * childOpcode = "NULL"
+      if(child)
+         childOpcode = child->getOpcode().getName();
+      
+      printf("Ehsan transforming N=%p C=%p T=%p Co=%s",callNode, child, callTree, childOpcode);
+      
       traceMsg(comp(), "Doing delayed call transformation on call node n%dn\n", callNode->getGlobalIndex());
 
       if (!performTransformation(comp(), "%sTransforming call node %p on tree %p to node %p\n", OPT_DETAILS, callNode, callTree, result))
