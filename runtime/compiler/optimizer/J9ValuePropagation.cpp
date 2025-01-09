@@ -1770,8 +1770,8 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
          {
          TR::Node *classChild = node->getLastChild();
          TR::Node *childOfChild = classChild->getFirstChild();
-         char *childOpCode = classChild->getOpCode().getName();
-         char *childOfChildOpCode = "NULL";
+         const char *childOpCode = classChild->getOpCode().getName();
+         const char *childOfChildOpCode = "NULL";
          if(childOfChild)
             childOfChildOpCode = childOfChild->getOpCode().getName();
 
@@ -3278,7 +3278,7 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
       TR::Node * child = callNode->getFirstChild();
-      char * childOpcode = "NULL"
+      const char * childOpcode = "NULL"
       if(child)
          childOpcode = child->getOpcode().getName();
       
