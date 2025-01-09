@@ -377,6 +377,7 @@ class ValuePropagation : public OMR::ValuePropagation
    const char *_ehsanPreviousChildOpcode = "NULL";
    const char *_ehsanPreviousChildOfChildOpcode = "NULL";
    TR::TreeTop *_ehsanPreviousTreeTop = NULL;
+   TR::Node *_ehsanLogThis = NULL;
 
    struct ValueTypesHelperCallTransform;
    struct ObjectComparisonHelperCallTransform;
