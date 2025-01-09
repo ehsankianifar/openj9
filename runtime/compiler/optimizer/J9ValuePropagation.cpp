@@ -3278,7 +3278,7 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
       TR::Node * child = callNode->getFirstChild();
-      const char * childOpcode = "NULL"
+      const char * childOpcode = "NULL";
       if(child)
          childOpcode = child->getOpcode().getName();
       
