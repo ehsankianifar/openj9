@@ -1955,7 +1955,7 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
                {
                TR_ASSERT_FATAL(_ehsanPrevious != node, "Getting same transformation for the node. current=%p previous=%p!\n", node, _ehsanPrevious);
                }
-
+            /*
             if(_ehsanPrevious == node)
                {
                printf("Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s *** Cp=%p CCp=%p Tp=%p Cop=%s CCop=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, _ehsanPreviousChild, _ehsanPreviousChildOfChild, _ehsanPreviousTreeTop, _ehsanPreviousChildOpcode, _ehsanPreviousChildOfChildOpcode);
@@ -1967,6 +1967,10 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             _ehsanPreviousChildOpcode = childOpCode;
             _ehsanPreviousChildOfChildOpcode = childOfChildOpCode;
             _ehsanPreviousTreeTop = _curTree;
+            */
+            FILE *fptr = fopen("EHSAN.log","a");
+            fprintf(fptr, "Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode);
+            fclose(fptr);
                
 
 
@@ -3279,15 +3283,15 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
 
-      if(callNode == _ehsanLogThis)
-         {
-         TR::Node * child = callNode->getFirstChild();
-         const char * childOpcode = "NULL";
-         if(child)
-            childOpcode = child->getOpCode().getName();
-         
-         printf("Ehsan transforming N=%p C=%p T=%p Co=%s\n",callNode, child, callTree, childOpcode);
-         }
+
+      TR::Node * child = callNode->getFirstChild();
+      const char * childOpcode = "NULL";
+      if(child)
+         childOpcode = child->getOpCode().getName();
+
+      FILE *fptr = fopen("EHSAN.log","a");
+      fprintf(fptr, "Ehsan transforming N=%p C=%p T=%p Co=%s\n",callNode, child, callTree, childOpcode);
+      fclose(fptr);
       
       traceMsg(comp(), "Doing delayed call transformation on call node n%dn\n", callNode->getGlobalIndex());
 
