@@ -1958,7 +1958,7 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
 
             if(_ehsanPrevious == node)
                {
-               printf("Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s *** Np=%p Cp=%p CCp=%p Tp=%p Cop=%s CCop=%s", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, _ehsanPrevious, _ehsanPreviousChild, _ehsanPreviousChildOfChild, _ehsanPreviousTreeTop, _ehsanPreviousChildOpcode, _ehsanPreviousChildOfChildOpcode);
+               printf("Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s *** Np=%p Cp=%p CCp=%p Tp=%p Cop=%s CCop=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, _ehsanPrevious, _ehsanPreviousChild, _ehsanPreviousChildOfChild, _ehsanPreviousTreeTop, _ehsanPreviousChildOpcode, _ehsanPreviousChildOfChildOpcode);
                }
             _ehsanPrevious = node;
             _ehsanPreviousChild = classChild;
@@ -3282,7 +3282,7 @@ J9::ValuePropagation::doDelayedTransformations()
       if(child)
          childOpcode = child->getOpCode().getName();
       
-      printf("Ehsan transforming N=%p C=%p T=%p Co=%s",callNode, child, callTree, childOpcode);
+      printf("Ehsan transforming N=%p C=%p T=%p Co=%s\n",callNode, child, callTree, childOpcode);
       
       traceMsg(comp(), "Doing delayed call transformation on call node n%dn\n", callNode->getGlobalIndex());
 
