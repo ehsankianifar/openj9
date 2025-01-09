@@ -1955,26 +1955,15 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
                {
                TR_ASSERT_FATAL(_ehsanPrevious != node, "Getting same transformation for the node. current=%p previous=%p!\n", node, _ehsanPrevious);
                }
-            /*
-            if(_ehsanPrevious == node)
+               
+            if(!strcmp(TR::comp()->getMethodBeingCompiled()->nameChars(), "integrate"))
                {
-               printf("Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s *** Cp=%p CCp=%p Tp=%p Cop=%s CCop=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, _ehsanPreviousChild, _ehsanPreviousChildOfChild, _ehsanPreviousTreeTop, _ehsanPreviousChildOpcode, _ehsanPreviousChildOfChildOpcode);
+               FILE *fptr = fopen("EHSAN.log","a");
+               fprintf(fptr, "Ehsan Add Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s Res=%p PN=%p\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, jlcOfComponentTypeNode, _ehsanPrevious);
+               fclose(fptr);
                _ehsanLogThis = node;
                }
             _ehsanPrevious = node;
-            _ehsanPreviousChild = classChild;
-            _ehsanPreviousChildOfChild = childOfChild;
-            _ehsanPreviousChildOpcode = childOpCode;
-            _ehsanPreviousChildOfChildOpcode = childOfChildOpCode;
-            _ehsanPreviousTreeTop = _curTree;
-            */
-            char *methodName = TR::comp()->getMethodBeingCompiled()->nameChars();
-            FILE *fptr = fopen("EHSAN.log","a");
-            fprintf(fptr, "Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s name=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, methodName);
-            fclose(fptr);
-               
-
-
                
             if(assertFirstTimeTime)
                TR_ASSERT_FATAL(false, "Failing on Node assertion. current=%p !\n", node);
@@ -3284,16 +3273,18 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node *result = it->_result;
       TR::Node * callNode = callTree->getNode()->getFirstChild();
 
+      if(callNode == _ehsanLogThis)
+         {
+         TR::Node * child = callNode->getFirstChild();
+         const char * childOpcode = "NULL";
+         if(child)
+            childOpcode = child->getOpCode().getName();
 
-      TR::Node * child = callNode->getFirstChild();
-      const char * childOpcode = "NULL";
-      if(child)
-         childOpcode = child->getOpCode().getName();
+         FILE *fptr = fopen("EHSAN.log","a");
+         fprintf(fptr, "Ehsan transforming N=%p C=%p T=%p Co=%s res=%p\n",callNode, child, callTree, childOpcode, result);
+         fclose(fptr);
+         }
 
-      FILE *fptr = fopen("EHSAN.log","a");
-      fprintf(fptr, "Ehsan transforming N=%p C=%p T=%p Co=%s\n",callNode, child, callTree, childOpcode);
-      fclose(fptr);
-      
       traceMsg(comp(), "Doing delayed call transformation on call node n%dn\n", callNode->getGlobalIndex());
 
       if (!performTransformation(comp(), "%sTransforming call node %p on tree %p to node %p\n", OPT_DETAILS, callNode, callTree, result))
