@@ -1968,8 +1968,9 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             _ehsanPreviousChildOfChildOpcode = childOfChildOpCode;
             _ehsanPreviousTreeTop = _curTree;
             */
+            char *methodName = TR::comp()->getMethodBeingCompiled()->nameChars();
             FILE *fptr = fopen("EHSAN.log","a");
-            fprintf(fptr, "Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode);
+            fprintf(fptr, "Ehsan Redundant Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s name=%s\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, methodName);
             fclose(fptr);
                
 
