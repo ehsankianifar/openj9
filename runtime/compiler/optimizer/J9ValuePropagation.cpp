@@ -3280,7 +3280,7 @@ J9::ValuePropagation::doDelayedTransformations()
       TR::Node * child = callNode->getFirstChild();
       const char * childOpcode = "NULL";
       if(child)
-         childOpcode = child->getOpcode().getName();
+         childOpcode = child->getOpCode().getName();
       
       printf("Ehsan transforming N=%p C=%p T=%p Co=%s",callNode, child, callTree, childOpcode);
       
