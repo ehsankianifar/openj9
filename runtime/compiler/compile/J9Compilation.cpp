@@ -984,6 +984,11 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
    vcount_t visitCount = self()->incVisitCount();
    TR::list<TR_Pair<TR::Node, TR::TreeTop> *> nodesList(getTypedAllocator<TR_Pair<TR::Node, TR::TreeTop> *>(self()->allocator()));
    TR::TreeTop *tt;
+   std::FILE *fptr = NULL;
+   if(!strcmp(TR::comp()->getMethodBeingCompiled()->nameChars(), "integrate"))
+      {
+      fptr = fopen("EHSAN.log","a");
+      }
    for (tt = self()->getStartTree(); tt; tt = tt->getNextTreeTop())
       {
       TR::Node *n = tt->getNode();
@@ -997,11 +1002,7 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
       // all non-null tt fields indicate some loads/stores were found
       // with no corresponding anchors
       //
-      std::FILE *fptr = NULL;
-      if(!strcmp(TR::comp()->getMethodBeingCompiled()->nameChars(), "integrate"))
-         {
-         fptr = fopen("EHSAN.log","a");
-         }
+
       for (auto info = nodesList.begin(); info != nodesList.end(); ++info)
          {
          TR::TreeTop *tt = (*info)->getValue();
@@ -1082,7 +1083,7 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
                fprintf(fptr, "Anchor %p\n", n, n->getReferenceCount());
                }
             }
-         if((*info)->getKey()->getReferenceCount<0)
+         if((*info)->getKey()->getReferenceCount() < 0)
             {
             if(fptr)
                {
