@@ -997,6 +997,11 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
       // all non-null tt fields indicate some loads/stores were found
       // with no corresponding anchors
       //
+      std::FILE *fptr = NULL;
+      if(!strcmp(TR::comp()->getMethodBeingCompiled()->nameChars(), "integrate"))
+         {
+         fptr = fopen("EHSAN.log","a");
+         }
       for (auto info = nodesList.begin(); info != nodesList.end(); ++info)
          {
          TR::TreeTop *tt = (*info)->getValue();
@@ -1062,10 +1067,39 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
                }
             else
                dumpOptDetails(self(), "field at [%p] need not be compressed\n", n);
+               if(fptr)
+                  {
+                  fprintf(fptr, "field at %p RC=%d\n", n, n->getReferenceCount());
+                  }
+
             }
          else
-            dumpOptDetails(self(), "Anchor found for load/store [%p]\n", (*info)->getKey());
+            {
+            TR::Node *n = (*info)->getKey();
+            dumpOptDetails(self(), "Anchor found for load/store [%p]\n", n);
+            if(fptr)
+               {
+               fprintf(fptr, "Anchor %p\n", n, n->getReferenceCount());
+               }
+            }
+         if((*info)->getKey()->getReferenceCount<0)
+            {
+            if(fptr)
+               {
+               fclose(fptr);
+               }
+               static const bool assertRefCount = feGetEnv("TR_AssertRefCount") != NULL;
+               if(assertRefCount)
+                  {
+                  TR_ASSERT_FATAL(false, "EHSAN bad ref count on %p\n", (*info)->getKey());
+                  }
+            }
          }
+      
+      }
+   if(fptr)
+      {
+      fclose(fptr);
       }
    return status;
    }
