@@ -1769,6 +1769,8 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
       case TR::java_lang_Class_getComponentType:
          {
          TR::Node *classChild = node->getLastChild();
+         int32_t childRc1 = classChild->getReferenceCount();
+
          TR::Node *childOfChild = classChild->getFirstChild();
          const char *childOpCode = classChild->getOpCode().getName();
          const char *childOfChildOpCode = "NULL";
@@ -1959,7 +1961,8 @@ J9::ValuePropagation::constrainRecognizedMethod(TR::Node *node)
             if(!strcmp(TR::comp()->getMethodBeingCompiled()->nameChars(), "integrate"))
                {
                FILE *fptr = fopen("EHSAN.log","a");
-               fprintf(fptr, "Ehsan Add Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s Res=%p PN=%p\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, jlcOfComponentTypeNode, _ehsanPrevious);
+               int32_t childRc2 = classChild->getReferenceCount();
+               fprintf(fptr, "Ehsan Add Transformation: N=%p C=%p CC=%p T=%p Co=%s CCo=%s Res=%p PN=%p RC1=%d RC2=%d\n", node, classChild, childOfChild, _curTree, childOpCode, childOfChildOpCode, jlcOfComponentTypeNode, _ehsanPrevious, childRc1, childRc2);
                fclose(fptr);
                _ehsanLogThis = node;
                }
@@ -3276,12 +3279,13 @@ J9::ValuePropagation::doDelayedTransformations()
       if(callNode == _ehsanLogThis)
          {
          TR::Node * child = callNode->getFirstChild();
+         int32_t childRc = child->getReferenceCount();
          const char * childOpcode = "NULL";
          if(child)
             childOpcode = child->getOpCode().getName();
 
          FILE *fptr = fopen("EHSAN.log","a");
-         fprintf(fptr, "Ehsan transforming N=%p C=%p T=%p Co=%s res=%p\n",callNode, child, callTree, childOpcode, result);
+         fprintf(fptr, "Ehsan transforming N=%p C=%p T=%p Co=%s res=%p RC=%d\n",callNode, child, callTree, childOpcode, result, childRc);
          fclose(fptr);
          }
 
