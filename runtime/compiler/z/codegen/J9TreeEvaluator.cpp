@@ -7606,6 +7606,16 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    TR::Compilation *comp = cg->comp();
    TR::Node * reference = NULL;
    TR::InstOpCode::S390BranchCondition branchOpCond = TR::InstOpCode::COND_BZ;
+   TR::Node * childCild = firstChild->getFirstChild();
+   int32_t ccrc = 0;
+   if(childCild)
+      ccrc = childCild->getReferenceCount();
+
+   std::FILE *fptr = fopen("EHSAN.log","a");
+   fprintf(fptr, "NULL N=%p C=%p CC=%p CRC=%d CCRC=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc);
+   int32_t path = 0;
+   int32_t path2 =0;
+
 
    bool hasCompressedPointers = false;
 
@@ -7624,10 +7634,12 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       while (n->getOpCodeValue() != loadOp && n->getOpCodeValue() != rdbarOp)
          n = n->getFirstChild();
       reference = n->getFirstChild();
+      path=1;
       }
    else
       {
       reference = node->getNullCheckReference();
+      path=2;
       }
 
    // Skip the NULLCHK for TR::loadaddr nodes.
@@ -7637,6 +7649,10 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       {
       cg->evaluate(firstChild);
       cg->decReferenceCount(firstChild);
+      if(childCild)
+         ccrc = childCild->getReferenceCount();
+      fprintf(fptr, "NULL2! N=%p C=%p CC=%p CRC=%d CCRC=%d path=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path);
+      fclose(fptr);
       return NULL;
       }
 
@@ -7681,6 +7697,8 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
             if (hasCompressedPointers
                   && node->getFirstChild()->getReferenceCount() > 2)
                needLateEvaluation = true;
+
+            path+=4;
             }
 
          // Check if offset from a NULL reference will fall into the inaccessible bytes,
@@ -7702,9 +7720,11 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                   {
                   if (nextTopNode->getOpCode().isBndCheck())
                      {
+                        path+=8;
                      if ((nextTopNode->getOpCode().isSpineCheck() && (nextTopNode->getChild(2) == n))
                            || (!nextTopNode->getOpCode().isSpineCheck() && (nextTopNode->getFirstChild() == n)))
                         {
+                           path+=16;
                         needLateEvaluation = false;
                         nextTopNode->setHasFoldedImplicitNULLCHK(true);
                         traceMsg(comp, "\nMerging NULLCHK [%p] and BNDCHK [%p] of load child [%p]", node, nextTopNode, n);
@@ -7714,6 +7734,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                         && nextTopNode->isNonoverriddenGuard()
                         && nextTopNode->getFirstChild() == firstChild)
                      {
+                        path+=32;
                      needLateEvaluation = false;
                      needExplicitCheck = true;
                      reference->incReferenceCount(); // will be decremented again later
@@ -7724,10 +7745,12 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          }
       else if (opCode.isStore())
          {
+            path+=64;
          TR::SymbolReference *symRef = n->getSymbolReference();
          if (n->getOpCode().hasSymbolReference()
                && (symRef->getSymbol()->getOffset() + symRef->getOffset() < cg->getNumberBytesWriteInaccessible()))
             {
+               path+=128;
             needExplicitCheck = false;
             }
          }
@@ -7735,6 +7758,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
             && opCode.isIndirect()
             && (cg->getNumberBytesReadInaccessible() > TR::Compiler->om.offsetOfObjectVftField()))
          {
+            path+=256;
          needExplicitCheck = false;
          }
       else if (opCode.getOpCodeValue() == TR::iushr
@@ -7749,6 +7773,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          //
          cg->evaluate(n->getFirstChild());
          needExplicitCheck = false;
+         path+=512;
          }
       else if (opCode.getOpCodeValue() == TR::monent
             || opCode.getOpCodeValue() == TR::monexit)
@@ -7761,10 +7786,11 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          cg->evaluate(reference);
          appendTo = cg->getAppendInstruction();
          cg->evaluate(firstChild);
-
+         path+=1024;
          if (cg->getImplicitExceptionPoint()
                && (cg->getNumberBytesReadInaccessible() > cg->fe()->getOffsetOfContiguousArraySizeField()))
             {
+               path+=2048;
             needExplicitCheck = false;
             cg->decReferenceCount(reference);
             }
@@ -7778,6 +7804,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       TR::Register * targetRegister = NULL;
       if (cg->getHasResumableTrapHandler())
          {
+            path+=4096;
          // Use Load-And-Trap on zHelix if available.
          // This loads the field and performance a NULLCHK on the field value.
          // i.e.  o.f == NULL
@@ -7786,6 +7813,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                && (reference->getOpCodeValue() != TR::ardbari)
                && reference->getRegister() == NULL)
             {
+               path+=8192;
             targetRegister = cg->allocateCollectedReferenceRegister();
             appendTo = generateRXInstruction(cg, TR::InstOpCode::getLoadAndTrapOpCode(), node, targetRegister, TR::MemoryReference::create(cg, reference), appendTo);
             reference->setRegister(targetRegister);
@@ -7798,22 +7826,25 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                && reference->getFirstChild()->getFirstChild()->getOpCode().isLoadVar()
                && TR::Compiler->om.compressedReferenceShiftOffset() == 0)
             {
+               path+=16384;
             targetRegister = cg->evaluate(reference);
             appendTo = cg->getAppendInstruction();
             if (appendTo->getOpCodeValue() == TR::InstOpCode::LLGF)
                {
+                  path+=32768;
                appendTo->setOpCodeValue(TR::InstOpCode::LLGFAT);
                appendTo->setNode(node);
                }
             else
                {
+                  path+=32768*2;
                appendTo = generateRIEInstruction(cg, TR::InstOpCode::getCmpImmTrapOpCode(), node, targetRegister, (int16_t)0, TR::InstOpCode::COND_BE, appendTo);
                }
             }
          else
             {
             targetRegister = reference->getRegister();
-
+            path+=32768*4;
             if (targetRegister == NULL)
                targetRegister = cg->evaluate(reference);
 
@@ -7830,6 +7861,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          }
       else
          {
+            path+=32768*8;
          // NULLCHK snippet label.
          TR::LabelSymbol * snippetLabel = generateLabelSymbol(cg);
          TR::SymbolReference *symRef = node->getSymbolReference();
@@ -7841,10 +7873,12 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                && reference->getOpCode().hasSymbolReference()
                && reference->getRegister() == NULL)
             {
+               path+=32768*16;
             bool isInternalPointer = reference->getSymbolReference()->getSymbol()->isInternalPointer();
             if ((reference->getOpCode().isLoadIndirect() || reference->getOpCodeValue() == TR::aload)
                   && !isInternalPointer)
                {
+                  path+=32768*32;
                targetRegister = cg->allocateCollectedReferenceRegister();
                }
             else
@@ -7852,6 +7886,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                targetRegister = cg->allocateRegister();
                if (isInternalPointer)
                   {
+                     path+=32768*64;
                   targetRegister->setPinningArrayPointer(reference->getSymbolReference()->getSymbol()->castToInternalPointerAutoSymbol()->getPinningArrayPointer());
                   targetRegister->setContainsInternalPointer();
                   }
@@ -7869,13 +7904,14 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          else
             {
             TR::Node *n = NULL;
-
+            path+=32768*128;
             // After the NULLCHK is generated, the nodes are guaranteed
             // to be non-zero.  Mark the nodes, so that subsequent
             // evaluations can be optimized.
             if (comp->useCompressedPointers()
                   && reference->getOpCodeValue() == TR::l2a)
                {
+                  path+=32768*256;
                reference->setIsNonNull(true);
                n = reference->getFirstChild();
                TR::ILOpCodes loadOp = comp->il.opCodeForIndirectLoad(TR::Int32);
@@ -7900,6 +7936,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
             // choice is to perform the NULLCHK on the decompressed address.
             if (n != NULL && n->getRegister() != NULL)
                {
+                  path+=32768*512;
                targetRegister = n->getRegister();
                cg->evaluate(reference);
 
@@ -7907,15 +7944,18 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                // here for a non-zero compressedrefs shift value
                if (TR::Compiler->om.readBarrierType() != gc_modron_readbar_none)
                   {
+                     path+=32768*1024;
                   cmpOpCode = TR::InstOpCode::getCmpOpCode();
                   }
                else
                   {
+                     path+=32768*2048;
                   cmpOpCode = (n->getOpCode().getSize() > 4) ? TR::InstOpCode::CG: TR::InstOpCode::C;
                   }
                }
             else
                {
+                  path+=32768*2048*2;
                targetRegister = cg->evaluate(reference);
                cmpOpCode = TR::InstOpCode::getCmpOpCode();   // reference is always an address type
                }
@@ -7928,17 +7968,27 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
 
    if (needLateEvaluation)
       {
+         path+=32768*2048*4;
       cg->evaluate(firstChild);
       }
    else if (needExplicitCheck)
       {
+         path+=32768*2048*8;
       cg->decReferenceCount(reference);
       }
 
+   
+
    if (comp->useCompressedPointers())
+   {
       cg->decReferenceCount(node->getFirstChild());
+      path2 = 1;
+   }
    else
+   {
       cg->decReferenceCount(firstChild);
+      path2 = 2;
+   }
 
    // If an explicit check has not been generated for the null check, there is
    // an instruction that will cause a hardware trap if the exception is to be
@@ -7950,9 +8000,11 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    //
    if (cg->getSupportsImplicitNullChecks() && !needExplicitCheck)
       {
+         path2 += 4;
       TR::Instruction *faultingInstruction = cg->getImplicitExceptionPoint();
       if (faultingInstruction)
          {
+            path2 += 8;
          faultingInstruction->setNeedsGCMap(0x0000FFFF);
          faultingInstruction->setThrowsImplicitNullPointerException();
          cg->setCanExceptByTrap(true);
@@ -7960,6 +8012,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          TR_Debug * debugObj = cg->getDebug();
          if (debugObj)
             {
+               path2 += 16;
             debugObj->addInstructionComment(faultingInstruction, "Throws Implicit Null Pointer Exception");
             }
          }
@@ -7968,6 +8021,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    if (comp->useCompressedPointers()
          && reference->getOpCodeValue() == TR::l2a)
       {
+         path2 += 32;
       reference->setIsNonNull(true);
       TR::Node *n = NULL;
       n = reference->getFirstChild();
@@ -7982,7 +8036,8 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       }
 
    reference->setIsNonNull(true);
-
+   fprintf(fptr, "NULL2! N=%p C=%p CC=%p CRC=%d CCRC=%d path=%x path2=%x\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path, path2);
+   fclose(fptr);
    return NULL;
    }
 
