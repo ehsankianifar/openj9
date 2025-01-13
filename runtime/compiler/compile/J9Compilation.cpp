@@ -1070,7 +1070,7 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
                dumpOptDetails(self(), "field at [%p] need not be compressed\n", n);
                if(fptr)
                   {
-                  fprintf(fptr, "field at %p RC=%d\n", n, n->getReferenceCount());
+                  //fprintf(fptr, "field at %p RC=%d\n", n, n->getReferenceCount());
                   }
 
             }
@@ -1080,7 +1080,7 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
             dumpOptDetails(self(), "Anchor found for load/store [%p]\n", n);
             if(fptr)
                {
-               fprintf(fptr, "Anchor %p RC=%d\n", n, n->getReferenceCount());
+               //fprintf(fptr, "Anchor %p RC=%d\n", n, n->getReferenceCount());
                }
             }
          if((*info)->getKey()->getReferenceCount() < 0)

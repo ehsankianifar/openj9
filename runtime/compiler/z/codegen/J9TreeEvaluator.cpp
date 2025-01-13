@@ -7608,11 +7608,17 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    TR::InstOpCode::S390BranchCondition branchOpCond = TR::InstOpCode::COND_BZ;
    TR::Node * childCild = firstChild->getFirstChild();
    int32_t ccrc = 0;
-   if(childCild)
+   int track = 0;
+   if(firstChild->getOpCodeValue() == TR::aloadi && childCild && childCild->getOpCodeValue()==TR::l2a)
+   {
+      track=1;
       ccrc = childCild->getReferenceCount();
+   }
+      
 
    std::FILE *fptr = fopen("EHSAN.log","a");
-   fprintf(fptr, "NULL N=%p C=%p CC=%p CRC=%d CCRC=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc);
+   if(track)
+      fprintf(fptr, "NULL N=%p C=%p CC=%p CRC=%d CCRC=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc);
    int32_t path = 0;
    int32_t path2 =0;
 
@@ -7639,7 +7645,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    else
       {
       reference = node->getNullCheckReference();
-      path=2;
+      path=2;//*** */
       }
 
    // Skip the NULLCHK for TR::loadaddr nodes.
@@ -7649,9 +7655,11 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       {
       cg->evaluate(firstChild);
       cg->decReferenceCount(firstChild);
-      if(childCild)
+      if(track)
+      {
          ccrc = childCild->getReferenceCount();
-      fprintf(fptr, "NULL2! N=%p C=%p CC=%p CRC=%d CCRC=%d path=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path);
+         fprintf(fptr, "NULL2! N=%p C=%p CC=%p CRC=%d CCRC=%d path=%d\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path);
+      }
       fclose(fptr);
       return NULL;
       }
@@ -7665,7 +7673,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
 
    // determine if an explicit check is needed
    if (cg->getSupportsImplicitNullChecks()
-         && !firstChild->isUnneededIALoad())
+         && !firstChild->isUnneededIALoad())//*** */
       {
       if (opCode.isLoadVar()
             || (cg->comp()->target().is64Bit() && opCode.getOpCodeValue()==TR::l2i)
@@ -7698,7 +7706,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
                   && node->getFirstChild()->getReferenceCount() > 2)
                needLateEvaluation = true;
 
-            path+=4;
+            path+=4;//*** */
             }
 
          // Check if offset from a NULL reference will fall into the inaccessible bytes,
@@ -7802,9 +7810,9 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    if(needExplicitCheck)
       {
       TR::Register * targetRegister = NULL;
-      if (cg->getHasResumableTrapHandler())
+      if (cg->getHasResumableTrapHandler())//*** */
          {
-            path+=4096;
+            path+=4096;//*** */
          // Use Load-And-Trap on zHelix if available.
          // This loads the field and performance a NULLCHK on the field value.
          // i.e.  o.f == NULL
@@ -7844,7 +7852,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
          else
             {
             targetRegister = reference->getRegister();
-            path+=32768*4;
+            path+=32768*4;//*** */
             if (targetRegister == NULL)
                targetRegister = cg->evaluate(reference);
 
@@ -7973,7 +7981,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       }
    else if (needExplicitCheck)
       {
-         path+=32768*2048*8;
+         path+=32768*2048*8;//*** */
       cg->decReferenceCount(reference);
       }
 
@@ -7982,7 +7990,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    if (comp->useCompressedPointers())
    {
       cg->decReferenceCount(node->getFirstChild());
-      path2 = 1;
+      path2 = 1;//*** */
    }
    else
    {
@@ -8021,7 +8029,7 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
    if (comp->useCompressedPointers()
          && reference->getOpCodeValue() == TR::l2a)
       {
-         path2 += 32;
+         path2 += 32;//*** */
       reference->setIsNonNull(true);
       TR::Node *n = NULL;
       n = reference->getFirstChild();
@@ -8036,7 +8044,11 @@ J9::Z::TreeEvaluator::evaluateNULLCHKWithPossibleResolve(TR::Node * node, bool n
       }
 
    reference->setIsNonNull(true);
-   fprintf(fptr, "NULL2! N=%p C=%p CC=%p CRC=%d CCRC=%d path=%x path2=%x\n", node, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path, path2);
+   if(track)
+   {
+         ccrc = childCild->getReferenceCount();
+      fprintf(fptr, "NULL END N=%p n=%p C=%p CC=%p CRC=%d CCRC=%d path=%x path2=%x\n", node,n, firstChild, childCild, firstChild->getReferenceCount(), ccrc, path, path2);
+   }
    fclose(fptr);
    return NULL;
    }
