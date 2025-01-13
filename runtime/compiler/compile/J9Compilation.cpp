@@ -1089,11 +1089,11 @@ J9::Compilation::verifyCompressedRefsAnchors(bool anchorize)
                {
                fclose(fptr);
                }
-               static const bool assertRefCount = feGetEnv("TR_AssertRefCount") != NULL;
-               if(assertRefCount)
-                  {
-                  TR_ASSERT_FATAL(false, "EHSAN bad ref count on %p\n", (*info)->getKey());
-                  }
+            static const bool assertRefCount = feGetEnv("TR_AssertRefCount") != NULL;
+            if(assertRefCount)
+               {
+               TR_ASSERT_FATAL(false, "EHSAN bad ref count on %p\n", (*info)->getKey());
+               }
             }
          }
       
