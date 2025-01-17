@@ -641,6 +641,7 @@ const OptimizationStrategy veryHotStrategyOpts[] =
 // ***************************************************************************
 const OptimizationStrategy scorchingStrategyOpts[] =
    {
+      { OMR::localValuePropagation                },
       { OMR::localValuePropagation,                 OMR::MarkLastRun              },
       { OMR::localReordering}
 // #if 0
