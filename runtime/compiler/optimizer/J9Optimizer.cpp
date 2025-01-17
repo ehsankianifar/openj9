@@ -242,6 +242,9 @@ static const OptimizationStrategy noOptStrategyOpts[] =
    {
    { OMR::trivialDeadTreeRemoval,  OMR::IfEnabled },
    { OMR::treeSimplification                      },
+   { OMR::localValuePropagation                },
+   { OMR::localValuePropagation,                 OMR::MarkLastRun              },
+   { OMR::localReordering},
    { OMR::recompilationModifier,   OMR::IfEnabled },
    { OMR::treeLowering,           OMR::MustBeDone },
    { OMR::globalLiveVariablesForGC, OMR::IfAggressiveLiveness },
@@ -293,6 +296,9 @@ static const OptimizationStrategy coldStrategyOpts[] =
    { OMR::jProfilingRecompLoopTest,                  OMR::IfLoops                    },
    { OMR::trivialDeadTreeRemoval,                                               },
    { OMR::cheapTacticalGlobalRegisterAllocatorGroup, OMR::IfAOTAndEnabled            },
+   { OMR::localValuePropagation                },
+   { OMR::localValuePropagation,                 OMR::MarkLastRun              },
+   { OMR::localReordering},
    { OMR::jProfilingValue,                           OMR::MustBeDone                 },
    { OMR::treeLowering,                              OMR::MustBeDone            },
    { OMR::globalLiveVariablesForGC,                  OMR::IfAggressiveLiveness  },
@@ -641,6 +647,10 @@ const OptimizationStrategy veryHotStrategyOpts[] =
 // ***************************************************************************
 const OptimizationStrategy scorchingStrategyOpts[] =
    {
+      // { OMR::localValuePropagation                },
+      // { OMR::localValuePropagation,                 OMR::MarkLastRun              },
+      // { OMR::localReordering},
+      // { OMR::endOpts                                            }
 #if 0
    { OMR::hotStrategy                                        },
    { OMR::endOpts                                            }
@@ -712,7 +722,7 @@ const OptimizationStrategy scorchingStrategyOpts[] =
    { OMR::hotFieldMarking                                                       },
    { OMR::endOpts                                            }
 #endif
-   };
+    };
 
 const OptimizationStrategy sequentialLoadAndStoreColdOpts[] =
    {
