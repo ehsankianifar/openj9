@@ -242,12 +242,12 @@ static const OptimizationStrategy noOptStrategyOpts[] =
    {
    { OMR::trivialDeadTreeRemoval,  OMR::IfEnabled },
    { OMR::treeSimplification                      },
-   { OMR::recompilationModifier,   OMR::IfEnabled },
-   { OMR::treeLowering,           OMR::MustBeDone },
-   { OMR::globalLiveVariablesForGC, OMR::IfAggressiveLiveness },
    { OMR::localValuePropagation                },
    { OMR::localValuePropagation,                 OMR::MarkLastRun              },
    { OMR::localReordering},
+   { OMR::recompilationModifier,   OMR::IfEnabled },
+   { OMR::treeLowering,           OMR::MustBeDone },
+   { OMR::globalLiveVariablesForGC, OMR::IfAggressiveLiveness },
    { OMR::endOpts                                 }
    };
 
