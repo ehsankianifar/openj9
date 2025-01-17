@@ -245,7 +245,10 @@ static const OptimizationStrategy noOptStrategyOpts[] =
    { OMR::recompilationModifier,   OMR::IfEnabled },
    { OMR::treeLowering,           OMR::MustBeDone },
    { OMR::globalLiveVariablesForGC, OMR::IfAggressiveLiveness },
-   { OMR::endOpts                                 }
+   { OMR::endOpts                                 },
+   { OMR::localValuePropagation                },
+   { OMR::localValuePropagation,                 OMR::MarkLastRun              },
+   { OMR::localReordering}
    };
 
 
