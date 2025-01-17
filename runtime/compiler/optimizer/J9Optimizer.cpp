@@ -643,6 +643,8 @@ const OptimizationStrategy scorchingStrategyOpts[] =
    {
       { OMR::localValuePropagation                },
       { OMR::localValuePropagation,                 OMR::MarkLastRun              },
+      { OMR::localReordering},
+      { OMR::localReordering},
       { OMR::localReordering}
 // #if 0
 //    { OMR::hotStrategy                                        },
