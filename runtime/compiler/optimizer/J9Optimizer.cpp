@@ -245,10 +245,10 @@ static const OptimizationStrategy noOptStrategyOpts[] =
    { OMR::recompilationModifier,   OMR::IfEnabled },
    { OMR::treeLowering,           OMR::MustBeDone },
    { OMR::globalLiveVariablesForGC, OMR::IfAggressiveLiveness },
-   { OMR::endOpts                                 },
    { OMR::localValuePropagation                },
    { OMR::localValuePropagation,                 OMR::MarkLastRun              },
-   { OMR::localReordering}
+   { OMR::localReordering},
+   { OMR::endOpts                                 }
    };
 
 
@@ -647,8 +647,7 @@ const OptimizationStrategy scorchingStrategyOpts[] =
       { OMR::localValuePropagation                },
       { OMR::localValuePropagation,                 OMR::MarkLastRun              },
       { OMR::localReordering},
-      { OMR::localReordering},
-      { OMR::localReordering}
+      { OMR::endOpts                                            }
 // #if 0
 //    { OMR::hotStrategy                                        },
 //    { OMR::endOpts                                            }
