@@ -192,9 +192,12 @@ J9::Z::CPU::isCompatible(const OMRProcessorDesc& processorDescription)
       }
    for (int i = 0; i < OMRPORT_SYSINFO_FEATURES_SIZE; i++)
       {
+      printf("CPU feture%d: Self:%x Dest:%x", i, self()->getProcessorDescription().features[i], processorDescription.features[i])
       // Check to see if the current processor contains all the features that code cache's processor has
       if ((processorDescription.features[i] & self()->getProcessorDescription().features[i]) != processorDescription.features[i])
+         {
          return false;
+         }
       }
    return true;
    }
