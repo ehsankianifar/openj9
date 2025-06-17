@@ -1617,6 +1617,10 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
          cursor = generateS390EInstruction(cg, TR::InstOpCode::BREAK, callNode, cursor);
 
 
+      ///Test
+      cursor = generateRegLitRefInstruction(cg, TR::InstOpCode::getLoadOpCode(), callNode, vTableIndexRegister,(uintptr_t) declaringClass, TR_ClassPointer);
+
+
       /********* Step 1: Check if LastITable is the target interface. *********/
       // Load the declaringClass on the vTableIndexRegister.
       cursor = genLoadAddressConstant(cg, callNode, (int64_t)declaringClass, vTableIndexRegister, cursor);
