@@ -262,7 +262,6 @@ enterContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 
 	/* let GC know we are mounting, so they don't need to scan us, or if there is already ongoing scan wait till it's complete. */
 	continuationObject = synchronizeWithConcurrentGCScan(currentThread, continuationObject, continuationStatePtr);
-	static const bool printIt = getenv("TR_PrintIt") ? ((atoi(getenv("TR_PrintIt"))  & (1<<3) )== (1<<3)) : FALSE;
 	if(printIt)
 		printf("enterContinuationAfterSynch currentThread:%p continuationObject:%p \n", currentThread, continuationObject);
 
