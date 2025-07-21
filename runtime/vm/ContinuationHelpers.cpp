@@ -156,14 +156,14 @@ createContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 
 	/* GC Hook to register Continuation object. */
 end:
-	printf("createContinuation currentThread:%p continuationObject:%p continuation:%p stack:%s \n", currentThread, continuationObject, continuation, stack);
+	printf("createContinuation currentThread:%p continuationObject:%p continuation:%p stack:%p \n", currentThread, continuationObject, continuation, stack);
 	return result;
 }
 
 j9object_t
 synchronizeWithConcurrentGCScan(J9VMThread *currentThread, j9object_t continuationObject, ContinuationState volatile *continuationStatePtr)
 {
-	printf("synchronizeWithConcurrentGCScan currentThread:%p continuationObject:%p continuationStatePtr:%s \n", currentThread, continuationObject, continuationStatePtr);
+	printf("synchronizeWithConcurrentGCScan currentThread:%p continuationObject:%p continuationStatePtr:%p \n", currentThread, continuationObject, continuationStatePtr);
 	ContinuationState oldContinuationState = 0;
 	ContinuationState returnContinuationState = 0;
 
@@ -319,7 +319,7 @@ enterContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 BOOLEAN
 yieldContinuation(J9VMThread *currentThread, BOOLEAN isFinished, UDATA returnState)
 {
-	printf("yieldContinuation currentThread:%p isFinished:%d returnState:%x \n", currentThread, isFinished, returnState);
+	printf("yieldContinuation currentThread:%p isFinished:%d returnState:%lx \n", currentThread, isFinished, returnState);
 	BOOLEAN result = TRUE;
 	J9VMContinuation *continuation = currentThread->currentContinuation;
 	j9object_t continuationObject = J9VMJAVALANGTHREAD_CONT(currentThread, currentThread->carrierThreadObject);
@@ -417,7 +417,7 @@ freeContinuation(J9VMThread *currentThread, j9object_t continuationObject, BOOLE
 void
 recycleContinuation(J9JavaVM *vm, J9VMThread *vmThread, J9VMContinuation* continuation, BOOLEAN skipLocalCache)
 {
-	printf("recycleContinuation vm:%p vmThread:%p continuationObject:%p skipLocalCache:%d continuation:%p \n", vm, vmThread, skipLocalCache, continuation);
+	printf("recycleContinuation vm:%p vmThread:%p skipLocalCache:%d continuation:%p \n", vm, vmThread, skipLocalCache, continuation);
 	PORT_ACCESS_FROM_JAVAVM(vm);
 	bool cached = false;
 	vm->totalContinuationStackSize += continuation->stackObject->size;
@@ -494,7 +494,7 @@ isPinnedContinuation(J9VMThread *currentThread)
 	} else {
 		/* Do nothing. */
 	}
-	printf("isPinnedContinuation currentThread:%p result:%p \n", currentThread, result);
+	printf("isPinnedContinuation currentThread:%p result:%x \n", currentThread, result);
 
 	return result;
 }
@@ -780,7 +780,7 @@ detachMonitorInfo(J9VMThread *currentThread, j9object_t lockObject, BOOLEAN *alr
 {
 	J9ObjectMonitor *objectMonitor = NULL;
 	j9objectmonitor_t lock = 0;
-	printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%d \n", currentThread, lockObject, alreadyDetached);
+	printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%u \n", currentThread, lockObject, alreadyDetached);
 
 	if (!LN_HAS_LOCKWORD(currentThread, lockObject)) {
 		objectMonitor = monitorTablePeek(currentThread->javaVM, lockObject);
@@ -913,7 +913,7 @@ UDATA
 ownedMonitorsIterator(J9VMThread *currentThread, J9StackWalkState *walkState)
 {
 	UDATA rc = J9_STACKWALK_KEEP_ITERATING;
-	printf("ownedMonitorsIterator currentThread:%p walkState:%p rc:%x \n", currentThread, walkState, rc);
+	printf("ownedMonitorsIterator currentThread:%p walkState:%p rc:%lx \n", currentThread, walkState, rc);
 
 	/* Take the J9JavaVM from the targetThread as currentThread may be null. */
 	J9JavaVM* javaVM = walkState->walkThread->javaVM;
