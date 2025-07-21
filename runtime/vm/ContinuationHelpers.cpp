@@ -780,7 +780,7 @@ detachMonitorInfo(J9VMThread *currentThread, j9object_t lockObject, BOOLEAN *alr
 {
 	J9ObjectMonitor *objectMonitor = NULL;
 	j9objectmonitor_t lock = 0;
-	printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%u \n", currentThread, lockObject, alreadyDetached);
+	printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%u \n", currentThread, lockObject, *alreadyDetached);
 
 	if (!LN_HAS_LOCKWORD(currentThread, lockObject)) {
 		objectMonitor = monitorTablePeek(currentThread->javaVM, lockObject);
