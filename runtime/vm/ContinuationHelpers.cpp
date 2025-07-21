@@ -156,14 +156,18 @@ createContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 
 	/* GC Hook to register Continuation object. */
 end:
-	printf("createContinuation currentThread:%p continuationObject:%p continuation:%p stack:%p \n", currentThread, continuationObject, continuation, stack);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<0));
+	if(printIt)
+		printf("createContinuation currentThread:%p continuationObject:%p continuation:%p stack:%p \n", currentThread, continuationObject, continuation, stack);
 	return result;
 }
 
 j9object_t
 synchronizeWithConcurrentGCScan(J9VMThread *currentThread, j9object_t continuationObject, ContinuationState volatile *continuationStatePtr)
 {
-	printf("synchronizeWithConcurrentGCScan currentThread:%p continuationObject:%p continuationStatePtr:%p \n", currentThread, continuationObject, continuationStatePtr);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<1));
+	if(printIt)
+		printf("synchronizeWithConcurrentGCScan currentThread:%p continuationObject:%p continuationStatePtr:%p \n", currentThread, continuationObject, continuationStatePtr);
 	ContinuationState oldContinuationState = 0;
 	ContinuationState returnContinuationState = 0;
 
@@ -221,7 +225,9 @@ synchronizeWithConcurrentGCScan(J9VMThread *currentThread, j9object_t continuati
 BOOLEAN
 enterContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 {
-	printf("enterContinuation currentThread:%p continuationObject:%p \n", currentThread, continuationObject);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<2));
+	if(printIt)
+		printf("enterContinuation currentThread:%p continuationObject:%p \n", currentThread, continuationObject);
 	J9JavaVM *vm = currentThread->javaVM;
 	BOOLEAN result = TRUE;
 	J9VMContinuation *continuation = J9VMJDKINTERNALVMCONTINUATION_VMREF(currentThread, continuationObject);
@@ -256,7 +262,9 @@ enterContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 
 	/* let GC know we are mounting, so they don't need to scan us, or if there is already ongoing scan wait till it's complete. */
 	continuationObject = synchronizeWithConcurrentGCScan(currentThread, continuationObject, continuationStatePtr);
-	printf("enterContinuationAfterSynch currentThread:%p continuationObject:%p \n", currentThread, continuationObject);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<3));
+	if(printIt)
+		printf("enterContinuationAfterSynch currentThread:%p continuationObject:%p \n", currentThread, continuationObject);
 
 	/* defer preMountContinuation() after synchronizeWithConcurrentGCScan() to compensate potential missing concurrent scan
 	 * between synchronizeWithConcurrentGCScan() to swapFieldsWithContinuation().
@@ -319,7 +327,9 @@ enterContinuation(J9VMThread *currentThread, j9object_t continuationObject)
 BOOLEAN
 yieldContinuation(J9VMThread *currentThread, BOOLEAN isFinished, UDATA returnState)
 {
-	printf("yieldContinuation currentThread:%p isFinished:%d returnState:%lx \n", currentThread, isFinished, returnState);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<4));
+	if(printIt)
+		printf("yieldContinuation currentThread:%p isFinished:%d returnState:%lx \n", currentThread, isFinished, returnState);
 	BOOLEAN result = TRUE;
 	J9VMContinuation *continuation = currentThread->currentContinuation;
 	j9object_t continuationObject = J9VMJAVALANGTHREAD_CONT(currentThread, currentThread->carrierThreadObject);
@@ -378,8 +388,9 @@ void
 freeContinuation(J9VMThread *currentThread, j9object_t continuationObject, BOOLEAN skipLocalCache)
 {
 	J9VMContinuation *continuation = J9VMJDKINTERNALVMCONTINUATION_VMREF(currentThread, continuationObject);
-
-	printf("freeContinuation currentThread:%p continuationObject:%p skipLocalCache:%d continuation:%p \n", currentThread, continuationObject, skipLocalCache, continuation);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<5));
+	if(printIt)
+		printf("freeContinuation currentThread:%p continuationObject:%p skipLocalCache:%d continuation:%p \n", currentThread, continuationObject, skipLocalCache, continuation);
 
 	if (NULL != continuation) {
 		ContinuationState continuationState = *VM_ContinuationHelpers::getContinuationStateAddress(currentThread, continuationObject);
@@ -417,7 +428,9 @@ freeContinuation(J9VMThread *currentThread, j9object_t continuationObject, BOOLE
 void
 recycleContinuation(J9JavaVM *vm, J9VMThread *vmThread, J9VMContinuation* continuation, BOOLEAN skipLocalCache)
 {
-	printf("recycleContinuation vm:%p vmThread:%p skipLocalCache:%d continuation:%p \n", vm, vmThread, skipLocalCache, continuation);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<6));
+	if(printIt)
+		printf("recycleContinuation vm:%p vmThread:%p skipLocalCache:%d continuation:%p \n", vm, vmThread, skipLocalCache, continuation);
 	PORT_ACCESS_FROM_JAVAVM(vm);
 	bool cached = false;
 	vm->totalContinuationStackSize += continuation->stackObject->size;
@@ -494,7 +507,9 @@ isPinnedContinuation(J9VMThread *currentThread)
 	} else {
 		/* Do nothing. */
 	}
-	printf("isPinnedContinuation currentThread:%p result:%x \n", currentThread, result);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<7));
+	if(printIt)
+		printf("isPinnedContinuation currentThread:%p result:%x \n", currentThread, result);
 
 	return result;
 }
@@ -502,7 +517,9 @@ isPinnedContinuation(J9VMThread *currentThread)
 void
 copyFieldsFromContinuation(J9VMThread *currentThread, J9VMThread *vmThread, J9VMEntryLocalStorage *els, J9VMContinuation *continuation)
 {
-	printf("copyFieldsFromContinuation currentThread:%p vmThread:%p els:%p continuation:%p \n", currentThread, vmThread, els, continuation);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<8));
+	if(printIt)
+		printf("copyFieldsFromContinuation currentThread:%p vmThread:%p els:%p continuation:%p \n", currentThread, vmThread, els, continuation);
 	vmThread->javaVM = currentThread->javaVM;
 	vmThread->arg0EA = continuation->arg0EA;
 	vmThread->bytecodes = continuation->bytecodes;
@@ -536,7 +553,9 @@ copyFieldsFromContinuation(J9VMThread *currentThread, J9VMThread *vmThread, J9VM
 UDATA
 walkContinuationStackFrames(J9VMThread *currentThread, J9VMContinuation *continuation, j9object_t threadObject, J9StackWalkState *walkState)
 {
-	printf("walkContinuationStackFrames currentThread:%p continuation:%p threadObject:%p walkState:%p \n", currentThread, continuation, threadObject, walkState);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<9));
+	if(printIt)
+		printf("walkContinuationStackFrames currentThread:%p continuation:%p threadObject:%p walkState:%p \n", currentThread, continuation, threadObject, walkState);
 	Assert_VM_notNull(currentThread);
 
 	UDATA rc = J9_STACKWALK_RC_NONE;
@@ -562,7 +581,9 @@ walkContinuationCallBack(J9VMThread *vmThread, J9MM_IterateObjectDescriptor *obj
 {
 	j9object_t continuationObj = object->object;
 	J9VMContinuation *continuation = J9VMJDKINTERNALVMCONTINUATION_VMREF(vmThread, continuationObj);
-	printf("walkContinuationCallBacks vmThread:%p object:%p userData:%p continuationObj:%p continuation:%p \n", vmThread, object, userData, continuationObj, continuation);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<10));
+	if(printIt)
+		printf("walkContinuationCallBacks vmThread:%p object:%p userData:%p continuationObj:%p continuation:%p \n", vmThread, object, userData, continuationObj, continuation);
 	if (NULL != continuation) {
 		J9StackWalkState localWalkState = *(J9StackWalkState*)userData;
 		/* Walk non-null continuation's stack */
@@ -578,8 +599,9 @@ walkAllStackFrames(J9VMThread *currentThread, J9StackWalkState *walkState)
 	J9JavaVM *vm = currentThread->javaVM;
 	J9StackWalkState localWalkState = {0};
 	UDATA rc = J9_STACKWALK_RC_NONE;
-
-	printf("walkAllStackFrames currentThread:%p walkState:%p \n", currentThread, walkState);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<10));
+	if(printIt)
+		printf("walkAllStackFrames currentThread:%p walkState:%p \n", currentThread, walkState);
 
 	Assert_VM_true((J9_XACCESS_EXCLUSIVE == vm->exclusiveAccessState) || (J9_XACCESS_EXCLUSIVE == vm->safePointState));
 
@@ -611,7 +633,9 @@ walkAllStackFrames(J9VMThread *currentThread, J9StackWalkState *walkState)
 BOOLEAN
 acquireVThreadInspector(J9VMThread *currentThread, jobject thread, BOOLEAN spin)
 {
-	printf("acquireVThreadInspector currentThread:%p thread:%p spin:%d \n", currentThread, thread, spin);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<11));
+	if(printIt)
+		printf("acquireVThreadInspector currentThread:%p thread:%p spin:%d \n", currentThread, thread, spin);
 	J9JavaVM *vm = currentThread->javaVM;
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 	MM_ObjectAccessBarrierAPI objectAccessBarrier = MM_ObjectAccessBarrierAPI(currentThread);
@@ -671,7 +695,9 @@ retry:
 void
 releaseVThreadInspector(J9VMThread *currentThread, jobject thread)
 {
-	printf("releaseVThreadInspector currentThread:%p thread:%p \n", currentThread, thread);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<12));
+	if(printIt)
+		printf("releaseVThreadInspector currentThread:%p thread:%p \n", currentThread, thread);
 	J9JavaVM *vm = currentThread->javaVM;
 	MM_ObjectAccessBarrierAPI objectAccessBarrier = MM_ObjectAccessBarrierAPI(currentThread);
 	j9object_t threadObj = J9_JNI_UNWRAP_REFERENCE(thread);
@@ -714,7 +740,9 @@ enterVThreadTransitionCritical(J9VMThread *currentThread, jobject thread)
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 	MM_ObjectAccessBarrierAPI objectAccessBarrier = MM_ObjectAccessBarrierAPI(currentThread);
 	j9object_t threadObj = J9_JNI_UNWRAP_REFERENCE(thread);
-	printf("enterVThreadTransitionCritical currentThread:%p thread:%p threadObj:%p \n", currentThread, thread, threadObj);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<13));
+	if(printIt)
+		printf("enterVThreadTransitionCritical currentThread:%p thread:%p threadObj:%p \n", currentThread, thread, threadObj);
 
 retry:
 	if (!VM_VMHelpers::isThreadSuspended(currentThread, threadObj)) {
@@ -757,7 +785,9 @@ exitVThreadTransitionCritical(J9VMThread *currentThread, jobject thread)
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 	j9object_t vthread = J9_JNI_UNWRAP_REFERENCE(thread);
 	MM_ObjectAccessBarrierAPI objectAccessBarrier = MM_ObjectAccessBarrierAPI(currentThread);
-	printf("exitVThreadTransitionCritical currentThread:%p thread:%p vthread:%p \n", currentThread, thread, vthread);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<14));
+	if(printIt)
+		printf("exitVThreadTransitionCritical currentThread:%p thread:%p vthread:%p \n", currentThread, thread, vthread);
 
 	/* Remove J9VMThread address from internalSuspendedState field, as the thread state is no longer in a transition. */
 	while (!objectAccessBarrier.inlineMixedObjectCompareAndSwapU64(currentThread, vthread, vm->internalSuspendStateOffset, (U_64)currentThread, J9_VIRTUALTHREAD_INTERNAL_STATE_NONE)) {
@@ -780,7 +810,9 @@ detachMonitorInfo(J9VMThread *currentThread, j9object_t lockObject, BOOLEAN *alr
 {
 	J9ObjectMonitor *objectMonitor = NULL;
 	j9objectmonitor_t lock = 0;
-	printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%u \n", currentThread, lockObject, *alreadyDetached);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<15));
+	if(printIt)
+		printf("detachMonitorInfo currentThread:%p lockObject:%p alreadyDetached:%u \n", currentThread, lockObject, *alreadyDetached);
 
 	if (!LN_HAS_LOCKWORD(currentThread, lockObject)) {
 		objectMonitor = monitorTablePeek(currentThread->javaVM, lockObject);
@@ -823,7 +855,9 @@ void
 updateMonitorInfo(J9VMThread *currentThread, J9ObjectMonitor *objectMonitor)
 {
 	J9ThreadAbstractMonitor *monitor = (J9ThreadAbstractMonitor *)objectMonitor->monitor;
-	printf("updateMonitorInfo currentThread:%p objectMonitor:%p monitor:%p \n", currentThread, objectMonitor, monitor);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<16));
+	if(printIt)
+		printf("updateMonitorInfo currentThread:%p objectMonitor:%p monitor:%p \n", currentThread, objectMonitor, monitor);
 	if (IS_J9_OBJECT_MONITOR_OWNER_DETACHED(monitor->owner)) {
 		Assert_VM_true(objectMonitor->ownerContinuation == currentThread->currentContinuation);
 		Trc_VM_updateMonitorInfo_Attach(currentThread, currentThread->currentContinuation, objectMonitor, monitor, monitor->owner, monitor->count, currentThread->osThread);
@@ -844,7 +878,9 @@ walkFrameMonitorEnterRecords(J9VMThread *currentThread, J9StackWalkState *walkSt
 	UDATA monitorCount = (UDATA)walkState->userData4;
 	U_32 modifiers;
 	UDATA *frameID;
-	printf("walkFrameMonitorEnterRecords currentThread:%p walkState:%p targetSyncObject:%p \n", currentThread, walkState, targetSyncObject);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<17));
+	if(printIt)
+		printf("walkFrameMonitorEnterRecords currentThread:%p walkState:%p targetSyncObject:%p \n", currentThread, walkState, targetSyncObject);
 
 	frameID = walkState->arg0EA;
 #ifdef J9VM_INTERP_NATIVE_SUPPORT
@@ -913,7 +949,9 @@ UDATA
 ownedMonitorsIterator(J9VMThread *currentThread, J9StackWalkState *walkState)
 {
 	UDATA rc = J9_STACKWALK_KEEP_ITERATING;
-	printf("ownedMonitorsIterator currentThread:%p walkState:%p rc:%lx \n", currentThread, walkState, rc);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<18));
+	if(printIt)
+		printf("ownedMonitorsIterator currentThread:%p walkState:%p rc:%lx \n", currentThread, walkState, rc);
 
 	/* Take the J9JavaVM from the targetThread as currentThread may be null. */
 	J9JavaVM* javaVM = walkState->walkThread->javaVM;
@@ -935,7 +973,9 @@ void
 preparePinnedVirtualThreadForMount(J9VMThread *currentThread, j9object_t continuationObject, BOOLEAN isObjectWait)
 {
 	UDATA monitorCount = 0;
-	printf("preparePinnedVirtualThreadForMount currentThread:%p  continuationObject:%p isObjectWait:%d \n", currentThread,  continuationObject, isObjectWait);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<19));
+	if(printIt)
+		printf("preparePinnedVirtualThreadForMount currentThread:%p  continuationObject:%p isObjectWait:%d \n", currentThread,  continuationObject, isObjectWait);
 
 	if (currentThread->ownedMonitorCount > 0) {
 		/* Update all owned monitors. */
@@ -968,7 +1008,9 @@ preparePinnedVirtualThreadForUnmount(J9VMThread *currentThread, j9object_t syncO
 	UDATA monitorCount = 0;
 	J9JavaVM *vm = currentThread->javaVM;
 	J9VMContinuation *continuation = currentThread->currentContinuation;
-	printf("preparePinnedVirtualThreadForUnmount currentThread:%p  syncObj:%p isObjectWait:%d continuation:%p \n", currentThread,  syncObj, isObjectWait, continuation);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<20));
+	if(printIt)
+		printf("preparePinnedVirtualThreadForUnmount currentThread:%p  syncObj:%p isObjectWait:%d continuation:%p \n", currentThread,  syncObj, isObjectWait, continuation);
 
 	if (NULL != syncObj) {
 		j9objectmonitor_t volatile *lwEA = VM_ObjectMonitor::inlineGetLockAddress(currentThread, syncObj);
@@ -1188,7 +1230,9 @@ waitForSignal(J9VMThread *currentThread)
 {
 	J9JavaVM *vm = currentThread->javaVM;
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
-	printf("waitForSignal currentThread:%p \n", currentThread);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<21));
+	if(printIt)
+		printf("waitForSignal currentThread:%p \n", currentThread);
 
 	/* In all other cases when VM Access and blockedVirtualThreadsMutex are both held
 	 * VM Access is acquired first so we should be consistent here as well otherwise
@@ -1222,7 +1266,9 @@ waitForSignal(J9VMThread *currentThread)
 jobject
 takeVirtualThreadListToUnblock(J9VMThread *currentThread)
 {
-	printf("takeVirtualThreadListToUnblock currentThread:%p \n", currentThread);
+	static const bool printIt = feGetEnv("TR_PrintIt") ? (aoi(feGetEnv("TR_PrintIt")) && (1<<22));
+	if(printIt)
+		printf("takeVirtualThreadListToUnblock currentThread:%p \n", currentThread);
 	j9object_t unblockedList = NULL;
 	jobject result = NULL;
 	J9JavaVM *vm = currentThread->javaVM;
