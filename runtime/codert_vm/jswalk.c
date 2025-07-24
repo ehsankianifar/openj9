@@ -98,6 +98,7 @@
 		for (clearRegNum = 0; clearRegNum < (J9SW_POTENTIAL_SAVED_REGISTERS - J9SW_JIT_CALLEE_PRESERVED_SIZE); ++clearRegNum) { \
 			((UDATA **) &((walkState)->registerEAs))[jitCalleeDestroyedRegisterList[clearRegNum]] = NULL; \
 		} \
+		printf("***CLEAR***\n");\
 	}
 #else
 #define CLEAR_LOCAL_REGISTER_MAP_ENTRIES(walkState)
@@ -374,6 +375,7 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 
 			if (walkState->flags & J9_STACKWALK_MAINTAIN_REGISTER_MAP) {
 				jitAddSpilledRegistersForResolve(walkState);
+				printf("***spill***\n");
 			}
 
 			switch(resolveFrameType) {
@@ -422,6 +424,7 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 
 				if (!inMethodPrologue) {
 					jitAddSpilledRegisters(walkState, walkState->stackMap);
+					printf("*** my spill***\n");
 				}
 				
 
