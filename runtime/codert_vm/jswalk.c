@@ -149,7 +149,7 @@ static void jitWalkOSRBuffer(J9StackWalkState *walkState, J9OSRBuffer *osrBuffer
 
 UDATA  jitWalkStackFrames(J9StackWalkState *walkState)
 {
-	int printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<1) )): 0;
+	int printIt = 1;
 	UDATA rc;
 	UDATA * returnSP;
 	U_8 * failedPC;
@@ -316,7 +316,7 @@ i2jTransition: ;
 
 static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 {
-	int printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<0) )): 0;
+	int printIt = 1;
 
 
 	if (walkState->frameFlags & J9_STACK_FLAGS_JIT_RESOLVE_FRAME) {
