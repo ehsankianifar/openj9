@@ -147,12 +147,16 @@ static void jitWalkOSRBuffer(J9StackWalkState *walkState, J9OSRBuffer *osrBuffer
 
 UDATA  jitWalkStackFrames(J9StackWalkState *walkState)
 {
+	static const bool printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<1) )== (1<<1)) : FALSE;
 	UDATA rc;
 	UDATA * returnSP;
 	U_8 * failedPC;
 	UDATA i;
 	U_8 ** returnTable;
 	void  (*savedDropToCurrentFrame)(struct J9StackWalkState * walkState) ;
+
+	if(printIt)
+		printf("WalkJit walkstate:%p flags:%lx \n", walkState, walkState->flags);
 
 	if (J9_ARE_ANY_BITS_SET(walkState->flags, J9_STACKWALK_RESUME)) {
 		walkState->flags &= ~J9_STACKWALK_RESUME;
@@ -310,6 +314,8 @@ i2jTransition: ;
 
 static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 {
+	static const bool printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<0) )== (1<<0)) : FALSE;
+
 
 	if (walkState->frameFlags & J9_STACK_FLAGS_JIT_RESOLVE_FRAME) {
 		J9SFJITResolveFrame * resolveFrame = (J9SFJITResolveFrame *) ((U_8 *) walkState->bp - sizeof(J9SFJITResolveFrame) + sizeof(UDATA));
@@ -375,7 +381,6 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 
 			if (walkState->flags & J9_STACKWALK_MAINTAIN_REGISTER_MAP) {
 				jitAddSpilledRegistersForResolve(walkState);
-				printf("***spill***\n");
 			}
 
 			switch(resolveFrameType) {
@@ -424,7 +429,8 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 
 				if (!inMethodPrologue) {
 					jitAddSpilledRegisters(walkState, walkState->stackMap);
-					printf("*** my spill***\n");
+					if(printIt)
+						printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
 				}
 				
 

@@ -553,8 +553,6 @@ UDATA
 walkContinuationStackFrames(J9VMThread *currentThread, J9VMContinuation *continuation, j9object_t threadObject, J9StackWalkState *walkState)
 {
 	static const bool printIt = getenv("TR_PrintIt") ? ((atoi(getenv("TR_PrintIt"))  & (1<<9) )== (1<<9)) : FALSE;
-	if(printIt)
-		printf("walkContinuationStackFrames currentThread:%p continuation:%p threadObject:%p walkState:%p \n", currentThread, continuation, threadObject, walkState);
 	Assert_VM_notNull(currentThread);
 
 	UDATA rc = J9_STACKWALK_RC_NONE;
@@ -570,6 +568,8 @@ walkContinuationStackFrames(J9VMThread *currentThread, J9VMContinuation *continu
 		walkState->walkThread = &stackThread;
 		rc = currentThread->javaVM->walkStackFrames(currentThread, walkState);
 	}
+	if(printIt)
+		printf("walkContinuationStackFrames currentThread:%p continuation:%p threadObject:%p walkState:%p flags:%lx\n", currentThread, continuation, threadObject, walkState, walkState->flags);
 
 	return rc;
 }
