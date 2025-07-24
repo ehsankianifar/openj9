@@ -38,8 +38,6 @@
 #ifdef J9VM_INTERP_LINEAR_STACKWALK_TRACING
 #include "../vm/linearswalk.h"
 #include "ut_j9vrb.h"
-#include "stdio.h"
-#include <stdlib.h>
 #else
 #include "ut_j9codertvm.h"
 #endif
@@ -422,7 +420,7 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 					CLEAR_LOCAL_REGISTER_MAP_ENTRIES(walkState);
 					if (!inMethodPrologue) {
 						jitAddSpilledRegisters(walkState, walkState->stackMap);
-						printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
+						swPrintf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
 					}
 				}
 
