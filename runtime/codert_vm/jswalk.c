@@ -420,9 +420,10 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 					CLEAR_LOCAL_REGISTER_MAP_ENTRIES(walkState);
 					if (!inMethodPrologue) {
 						jitAddSpilledRegisters(walkState, walkState->stackMap);
-						j9tty_printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
+						printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
 					}
 				}
+				printf("Test printf:%p flags:%lx \n", walkState, walkState->flags);
 
 				
 				
