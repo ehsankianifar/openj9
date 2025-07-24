@@ -39,6 +39,7 @@
 #include "../vm/linearswalk.h"
 #include "ut_j9vrb.h"
 #include "stdio.h"
+#include <stdlib.h>
 #else
 #include "ut_j9codertvm.h"
 #endif
@@ -148,7 +149,7 @@ static void jitWalkOSRBuffer(J9StackWalkState *walkState, J9OSRBuffer *osrBuffer
 
 UDATA  jitWalkStackFrames(J9StackWalkState *walkState)
 {
-	static const bool printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<1) )== (1<<1)) : FALSE;
+	int printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<1) )): 0;
 	UDATA rc;
 	UDATA * returnSP;
 	U_8 * failedPC;
@@ -315,7 +316,7 @@ i2jTransition: ;
 
 static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 {
-	static const bool printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<0) )== (1<<0)) : FALSE;
+	int printIt = getenv("TR_PrintIt2") ? ((atoi(getenv("TR_PrintIt2"))  & (1<<0) )): 0;
 
 
 	if (walkState->frameFlags & J9_STACK_FLAGS_JIT_RESOLVE_FRAME) {
