@@ -388,6 +388,7 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 				break;
 			case J9_STACK_FLAGS_JIT_FAILED_METHOD_MONITOR_ENTER_RESOLVE:
 				inMethodPrologue = FALSE;
+
 				/* Intentional fall-through */
 			case J9_STACK_FLAGS_JIT_STACK_OVERFLOW_RESOLVE_FRAME:
 				walkState->jitInfo = jitGetExceptionTable(walkState);
@@ -418,6 +419,11 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 				if (walkState->flags & J9_STACKWALK_MAINTAIN_REGISTER_MAP) {
 					CLEAR_LOCAL_REGISTER_MAP_ENTRIES(walkState);
 				}
+
+				if (!inMethodPrologue) {
+					jitAddSpilledRegisters(walkState, walkState->stackMap);
+				}
+				
 
 				UNWIND_TO_NEXT_FRAME(walkState);
 			}
