@@ -149,16 +149,12 @@ static void jitWalkOSRBuffer(J9StackWalkState *walkState, J9OSRBuffer *osrBuffer
 
 UDATA  jitWalkStackFrames(J9StackWalkState *walkState)
 {
-	int printIt = 1;
 	UDATA rc;
 	UDATA * returnSP;
 	U_8 * failedPC;
 	UDATA i;
 	U_8 ** returnTable;
 	void  (*savedDropToCurrentFrame)(struct J9StackWalkState * walkState) ;
-
-	if(printIt)
-		printf("WalkJit walkstate:%p flags:%lx \n", walkState, walkState->flags);
 
 	if (J9_ARE_ANY_BITS_SET(walkState->flags, J9_STACKWALK_RESUME)) {
 		walkState->flags &= ~J9_STACKWALK_RESUME;
@@ -316,9 +312,6 @@ i2jTransition: ;
 
 static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 {
-	int printIt = 1;
-
-
 	if (walkState->frameFlags & J9_STACK_FLAGS_JIT_RESOLVE_FRAME) {
 		J9SFJITResolveFrame * resolveFrame = (J9SFJITResolveFrame *) ((U_8 *) walkState->bp - sizeof(J9SFJITResolveFrame) + sizeof(UDATA));
 		UDATA resolveFrameType = walkState->frameFlags & J9_STACK_FLAGS_JIT_FRAME_SUB_TYPE_MASK;
@@ -427,13 +420,13 @@ static UDATA walkTransitionFrame(J9StackWalkState *walkState)
 
 				if (walkState->flags & J9_STACKWALK_MAINTAIN_REGISTER_MAP) {
 					CLEAR_LOCAL_REGISTER_MAP_ENTRIES(walkState);
+					if (!inMethodPrologue) {
+						jitAddSpilledRegisters(walkState, walkState->stackMap);
+						printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
+					}
 				}
 
-				if (!inMethodPrologue) {
-					jitAddSpilledRegisters(walkState, walkState->stackMap);
-					if(printIt)
-						printf("Spill walkstate:%p flags:%lx \n", walkState, walkState->flags);
-				}
+				
 				
 
 				UNWIND_TO_NEXT_FRAME(walkState);
