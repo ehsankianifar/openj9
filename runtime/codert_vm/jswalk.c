@@ -38,6 +38,7 @@
 #ifdef J9VM_INTERP_LINEAR_STACKWALK_TRACING
 #include "../vm/linearswalk.h"
 #include "ut_j9vrb.h"
+#include "stdio.h"
 #else
 #include "ut_j9codertvm.h"
 #endif
