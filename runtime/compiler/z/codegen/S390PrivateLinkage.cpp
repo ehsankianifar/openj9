@@ -1588,7 +1588,7 @@ getITableIterationsNumber(TR::Compilation * comp, TR::SymbolReference * methodSy
 
 TR::Instruction *
 generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callNode, TR::Register * vftReg, TR::Register * entryPointRegister,
-   TR::Register * vTableIndexRegister, TR::Register * lastIpicMethodRegister, TR::RegisterDependencyConditions * postDeps, TR::Instruction * cursor, int numPicSlots, TR::RegisterDependencyConditions * postDeps)
+   TR::Register * vTableIndexRegister, TR::Register * lastIpicMethodRegister, TR::RegisterDependencyConditions * postDeps, TR::Instruction * cursor, int numPicSlots)
    {
    TR::Compilation * comp = cg->comp();
    TR_J9VMBase *fej9 = reinterpret_cast<TR_J9VMBase *>(comp->fe());
@@ -2315,7 +2315,7 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
          // We need a dummy label to hook dependencies.
          cursor = generateS390LabelInstruction(cg(), TR::InstOpCode::label, callNode, paramSetupDummyLabel, preDeps, cursor);
 
-         cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, -2, postDeps);
+         cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, -2);
 
          cursor = new (trHeapMemory()) TR::S390RILInstruction(TR::InstOpCode::LARL, callNode, regEP, ifcSnippet, cursor, cg());
 
@@ -2394,7 +2394,7 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
             ((TR::S390RegInstruction *)cursor)->setBranchCondition(TR::InstOpCode::COND_BER);
 
             // Add instructions for LastITable and ITable check.
-            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, snippetReg, vTableIndexRegister, methodRegister, postDeps, cursor, -1, postDeps);
+            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, snippetReg, vTableIndexRegister, methodRegister, postDeps, cursor, -1);
 
             cursor = new (trHeapMemory()) TR::S390RILInstruction(TR::InstOpCode::LARL, callNode, regEP, ifcSnippet,cursor, cg());
 
@@ -2498,7 +2498,7 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
             1, 0, 1, cursor, regEP);
 
             // Add instructions for LastITable and ITable check.
-            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, numInterfaceCallCacheSlots, postDeps);
+            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, numInterfaceCallCacheSlots);
 
             cursor = cg()->generateDebugCounter(
             TR::DebugCounter::debugCounterName(comp(), "interface/%d/HelperCall", numInterfaceCallCacheSlots),
