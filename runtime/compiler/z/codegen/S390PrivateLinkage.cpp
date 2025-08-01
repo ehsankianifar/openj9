@@ -2437,8 +2437,8 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
 
             cursor = generateRILInstruction(cg(), TR::InstOpCode::LARL, callNode, regRA, returnLocationLabel, cursor);
 
-            cursor = cg->generateDebugCounter(
-            TR::DebugCounter::debugCounterName(comp, "interface/%d/total", numInterfaceCallCacheSlots),
+            cursor = cg()->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp(), "interface/%d/total", numInterfaceCallCacheSlots),
             NULL,
             1, 0, 1, cursor, methodRegister);
 
@@ -2492,16 +2492,16 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
                   }
                }
             
-            cursor = cg->generateDebugCounter(
-            TR::DebugCounter::debugCounterName(comp, "interface/%d/MissedIPIC", numInterfaceCallCacheSlots),
+            cursor = cg()->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp(), "interface/%d/MissedIPIC", numInterfaceCallCacheSlots),
             NULL,
             1, 0, 1, cursor, regEP);
 
             // Add instructions for LastITable and ITable check.
             cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, numInterfaceCallCacheSlots);
 
-            cursor = cg->generateDebugCounter(
-            TR::DebugCounter::debugCounterName(comp, "interface/%d/HelperCall", numInterfaceCallCacheSlots),
+            cursor = cg()->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp(), "interface/%d/HelperCall", numInterfaceCallCacheSlots),
             NULL,
             1, 0, 1, cursor, regEP);
 
