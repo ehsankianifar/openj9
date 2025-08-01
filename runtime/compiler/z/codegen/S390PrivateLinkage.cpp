@@ -1588,7 +1588,7 @@ getITableIterationsNumber(TR::Compilation * comp, TR::SymbolReference * methodSy
 
 TR::Instruction *
 generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callNode, TR::Register * vftReg, TR::Register * entryPointRegister,
-   TR::Register * vTableIndexRegister, TR::Register * lastIpicMethodRegister, TR::RegisterDependencyConditions * postDeps, TR::Instruction * cursor)
+   TR::Register * vTableIndexRegister, TR::Register * lastIpicMethodRegister, TR::RegisterDependencyConditions * postDeps, TR::Instruction * cursor, int numPicSlots)
    {
    TR::Compilation * comp = cg->comp();
    TR_J9VMBase *fej9 = reinterpret_cast<TR_J9VMBase *>(comp->fe());
@@ -1620,15 +1620,17 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
       // Reusing lastIpicMethodRegister for loopCount.
       TR::Register * loopCountRegister = lastIpicMethodRegister;
       bool stopUsingLoopCountRegister = false;
+      static char *whereToCheckIPIC = feGetEnv("TR_WhereToCheckIPIC");
+
       // Jump OOL.
-      if(lastIpicMethodRegister == NULL)
+      if((lastIpicMethodRegister == NULL) || (*whereToCheckIPIC != '1'))
          {
          cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, callNode, entryLabel, cursor);
          }
       else
          {
          // If lastIpicMethodRegister exist, it should have a non NULL value. Otherwise the PIC slots are not fully populated.
-         cursor = generateRRInstruction(cg, TR::InstOpCode::LTG, callNode, lastIpicMethodRegister, lastIpicMethodRegister);
+         cursor = generateRRInstruction(cg, TR::InstOpCode::LTG, callNode, lastIpicMethodRegister, lastIpicMethodRegister, cursor);
          cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNZ, callNode, entryLabel, cursor);
          }
       TR_S390OutOfLineCodeSection *outlinedITableCheckSequence = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(entryLabel, exitLabel, cg);
@@ -1659,10 +1661,20 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
       oolCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNE, callNode, noLastITableMatchLabel, oolCursor);
       iComment("No Match, jump to next test.", oolCursor)
 
+      oolCursor = cg->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp, "interface/%d/lastItableHit/%d", numPicSlots, iTableIterations),
+            NULL,
+            1, 0, 1, oolCursor, loopCountRegister);
 
       /********* Step 2: Dispatch to the method implementation. *********/
       if (checkITableEntries)
          oolCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, callNode, matchLabel, oolCursor);
+
+      oolCursor = cg->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp, "interface/%d/lastItablePlusItableHit/%d", numPicSlots, iTableIterations),
+            NULL,
+            1, 0, 1, oolCursor, loopCountRegister);
+
       // Calculating vTableIndex value. vTableIndexRegister must have the vTableIndex value when dispatching.
       oolCursor = generateRIInstruction(cg, TR::InstOpCode::getLoadHalfWordImmOpCode() , callNode, vTableIndexRegister, fej9->getITableEntryJitVTableOffset(), oolCursor);
       iComment("Start calculating entry point.", oolCursor)
@@ -1684,6 +1696,14 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
          {
          oolCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, callNode, noLastITableMatchLabel, oolCursor);
          iComment("Start comparing interface with iTable entries.", oolCursor)
+
+         if((lastIpicMethodRegister != NULL) && (*whereToCheckIPIC == '2'))
+            {
+            // If lastIpicMethodRegister exist, it should have a non NULL value. Otherwise the PIC slots are not fully populated.
+            oolCursor = generateRRInstruction(cg, TR::InstOpCode::LTG, callNode, lastIpicMethodRegister, lastIpicMethodRegister, oolCursor);
+            oolCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, callNode, oolMergeLabel, oolCursor);
+            }
+         
          if (checkLimitedNumberOfITableEntries)
             {
             // Load the limit to the loop count register.
@@ -2295,7 +2315,7 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
          // We need a dummy label to hook dependencies.
          cursor = generateS390LabelInstruction(cg(), TR::InstOpCode::label, callNode, paramSetupDummyLabel, preDeps, cursor);
 
-         cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor);
+         cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, -2);
 
          cursor = new (trHeapMemory()) TR::S390RILInstruction(TR::InstOpCode::LARL, callNode, regEP, ifcSnippet, cursor, cg());
 
@@ -2374,7 +2394,7 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
             ((TR::S390RegInstruction *)cursor)->setBranchCondition(TR::InstOpCode::COND_BER);
 
             // Add instructions for LastITable and ITable check.
-            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, snippetReg, vTableIndexRegister, methodRegister, postDeps, cursor);
+            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, snippetReg, vTableIndexRegister, methodRegister, postDeps, cursor, -1);
 
             cursor = new (trHeapMemory()) TR::S390RILInstruction(TR::InstOpCode::LARL, callNode, regEP, ifcSnippet,cursor, cg());
 
@@ -2416,6 +2436,11 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
             // 64 bit MultiSlot case
 
             cursor = generateRILInstruction(cg(), TR::InstOpCode::LARL, callNode, regRA, returnLocationLabel, cursor);
+
+            cursor = cg->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp, "interface/%d/total", numInterfaceCallCacheSlots),
+            NULL,
+            1, 0, 1, cursor, methodRegister);
 
             // We need a dummy label to hook dependencies.
             cursor = generateS390LabelInstruction(cg(), TR::InstOpCode::label, callNode, paramSetupDummyLabel, preDeps, cursor);
@@ -2466,9 +2491,19 @@ J9::Z::PrivateLinkage::buildVirtualDispatch(TR::Node * callNode, TR::RegisterDep
                   slotOffset += 2*TR::Compiler->om.sizeofReferenceAddress();
                   }
                }
+            
+            cursor = cg->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp, "interface/%d/MissedIPIC", numInterfaceCallCacheSlots),
+            NULL,
+            1, 0, 1, cursor, regEP);
 
             // Add instructions for LastITable and ITable check.
-            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor);
+            cursor = generateLastITableAndITableInstructions(cg(), callNode, vftReg, regEP, vTableIndexRegister, methodRegister, postDeps, cursor, numInterfaceCallCacheSlots);
+
+            cursor = cg->generateDebugCounter(
+            TR::DebugCounter::debugCounterName(comp, "interface/%d/HelperCall", numInterfaceCallCacheSlots),
+            NULL,
+            1, 0, 1, cursor, regEP);
 
             cursor = new (trHeapMemory()) TR::S390RILInstruction(TR::InstOpCode::LARL, callNode, snippetReg, ifcSnippet,cursor, cg());
 
