@@ -1623,7 +1623,7 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
       static char *whereToCheckIPIC = feGetEnv("TR_WhereToCheckIPIC");
 
       // Jump OOL.
-      if((lastIpicMethodRegister == NULL) || (*whereToCheckIPIC != '1'))
+      if((lastIpicMethodRegister == NULL) || (whereToCheckIPIC && (*whereToCheckIPIC != '1')))
          {
          cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, callNode, entryLabel, cursor);
          }
@@ -1697,7 +1697,7 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
          oolCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, callNode, noLastITableMatchLabel, oolCursor);
          iComment("Start comparing interface with iTable entries.", oolCursor)
 
-         if((lastIpicMethodRegister != NULL) && (*whereToCheckIPIC == '2'))
+         if((lastIpicMethodRegister != NULL) && whereToCheckIPIC && (*whereToCheckIPIC == '2'))
             {
             // If lastIpicMethodRegister exist, it should have a non NULL value. Otherwise the PIC slots are not fully populated.
             oolCursor = generateRRInstruction(cg, TR::InstOpCode::LTG, callNode, lastIpicMethodRegister, lastIpicMethodRegister, oolCursor);
