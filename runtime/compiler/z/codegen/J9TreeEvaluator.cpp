@@ -4788,6 +4788,125 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
    }
 
+
+///////////////////////////////////////////////////////////////////////////////////////
+// multianewArrayEvaluator:  multi-dimensional new array of objects
+// NB Must only be used for arrays of at least two dimensions
+///////////////////////////////////////////////////////////////////////////////////////
+static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node, TR::CodeGenerator *cg)
+{
+   TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
+   TR::Register *classReg = cg->evaluate(node->getThirdChild());
+   TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
+   TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
+   TR::LabelSymbol *doneLabel = generateLabelSymbol(cg);
+   TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
+
+   int32_t elementSize = sizeofReferenceField();
+   int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
+   int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes(); //TODO: make sure alignment fix discontguous length.
+   int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
+
+   TR::Register *sizeReg = cg->allocateRegister();
+   TR::Register *dimLength1 = cg->allocateRegister();
+   TR::Register *dimLength2 = cg->allocateRegister();
+   TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
+   //Estimate size
+   //EHSAN
+
+   static bool breakBeforeMultiArray = feGetEnv("TR_breakBeforeMultiArray") != NULL;
+   if (breakBeforeMultiArray)
+      generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
+
+   // reset size.
+   generateRRInstruction(cg, TR::InstOpCode::XR, node, sizeReg, sizeReg);
+
+
+   //fist dim ASSUME no overflow over 32 bits TODO: add check for length
+   // high side has fist dim low side has second dim
+   generateRXInstruction(cg, TR::InstOpCode::LG, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   // multipli element size
+   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength1, dimLength1, trailingZeroes(elementSize));
+   generateRRInstruction(cg, TR::InstOpCode::LR, node, dimLength2, dimLength1);
+   generateRSInstruction(cg, TR::InstOpCode::SRLG, node, dimLength1, dimLength1, 32);
+   // Add header size and align
+   generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength1, headerSize + alignmentConstant - 1);
+   generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant);
+   generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength2, headerSize + alignmentConstant - 1);
+   generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength2, -alignmentConstant);
+
+   //Load second dim size in size reg. Total size = second dim siz * first dim length + first dim size
+   generateRRInstruction(cg, TR::InstOpCode::LR, node, sizeReg, dimLength2);
+   generateRXInstruction(cg, TR::InstOpCode::MSC, node, sizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   //Add fist dim size to total size. TODO: size can not be over 32 bits! fix it
+   generateRRInstruction(cg, TR::InstOpCode::AR, node, sizeReg, dimLength1);
+
+   // HeapTop test
+   generateRXInstruction(cg, TR::InstOpCode::LG, node, resultReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
+   generateRRInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg);
+   generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapTop), cg));
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel);
+
+   // HeapTop pass
+   // TODO: does it need to be here or I can move it to the buttom?
+   generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
+
+   //Initialize memory
+   //TODO: init memory if needed
+
+
+   //Alloc first dim:
+   //write class TODO:fix for non com refs!
+   generateRXInstruction(cg, TR::InstOpCode::ST, node, resultReg, generateS390MemoryReference(resultReg, 0, cg));
+   //Set length
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(resultReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
+   //Size point to start of secend dim:
+   generateRRRInstruction(cg(), TR::InstOpCode::ALGRK, node, sizeReg, resultReg, dimLength1);
+   // dim1len oint to fist 
+   generateRIEInstruction(cg, TR::InstOpCode::ALGHSIK, node, dimLength1, resultReg, 8);
+
+
+   //Start setting second dim:
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
+   generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, doneLabel);
+   //set second dim class and length. TODO: use register or vectorize it.
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, storeNode, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)));
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, storeNode, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 4, cg));
+
+   if (shiftAmount != 0)
+      generateRSInstruction(cg, TR::InstOpCode::SRAG, node, sizeReg, sizeReg, shiftAmount);
+
+   generateRXInstruction(cg, TR::InstOpCode::ST, node, sizeReg, generateS390MemoryReference(dimLength1, 0, cg));
+
+   if (shiftAmount != 0)
+      generateRSInstruction(cg, TR::InstOpCode::SLLG, node, sizeReg, sizeReg, shiftAmount);
+
+   generateRRInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, dimLength2);
+   generateRIInstruction(cg, TR::InstOpCode::AGHI, node, dimLength1, 4);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, secondDimLabel);
+
+   //Slow path
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
+   TR::ILOpCodes opCode = node->getOpCodeValue();
+   TR::Node::recreate(node, TR::acall);
+   TR::Register *resultReg2 = TR::TreeEvaluator::performCall(node, false, cg);
+   TR::Node::recreate(node, opCode);
+
+   //done
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel);
+   static bool breakAftereMultiArray = feGetEnv("TR_breakAftereMultiArray") != NULL;
+   if (breakAftereMultiArray)
+      generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
+
+   cg->stopUsingRegister(sizeReg);
+   cg->stopUsingRegister(dimLength1);
+   cg->stopUsingRegister(dimLength2);
+   node->setRegister(resultReg);
+   //TODO: decrease ref counts.
+   return resultReg;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // multianewArrayEvaluator:  multi-dimensional new array of objects
 // NB Must only be used for arrays of at least two dimensions
@@ -4831,6 +4950,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
     * field for 0-size arrays. dataAddr field is 64 bits whereas size field is 32 bits so
     * we need LGF to clear upper 32 bits of the register.
     */
+   static bool breakBeforeMultiArray = feGetEnv("TR_breakBeforeMultiArray") != NULL;
+   if (breakBeforeMultiArray)
+      generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
+
    TR::Register *firstDimLenReg = cg->allocateRegister();
    cursor = generateRXInstruction(cg, TR::InstOpCode::LGF, node, firstDimLenReg, generateS390MemoryReference(dimsPtrReg, 4, cg));
    iComment("Load 1st dim length.");
@@ -5103,6 +5226,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, cFlowRegionDone);
    outlinedSlowPath->swapInstructionListsWithCompilation();
 
+   static bool breakAftereMultiArray = feGetEnv("TR_breakAftereMultiArray") != NULL;
+   if (breakAftereMultiArray)
+      generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
+
    // Note: We don't decrement the ref count node's children here (i.e. cg->decReferenceCount(node->getFirstChild())) because it is done by the performCall in the OOL code above.
    // Doing so here would end up double decrementing the children nodes' ref count.
 
@@ -5138,7 +5265,12 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    // Only generate inline code if nDims > 1
    uint32_t nDims = secondChild->get32bitIntegralValue();
-   if (nDims > 1)
+   static bool useNew = feGetEnv("TR_useNewMultiAlloc") != NULL;
+   if (useNew && (nDims == 2))
+      {
+      return generateMultianewArrayWithInlineAllocators2(node, cg);
+      }
+   else if (nDims > 1)
       {
       return generateMultianewArrayWithInlineAllocators(node, cg);
       }
