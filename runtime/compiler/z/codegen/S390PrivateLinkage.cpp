@@ -1630,8 +1630,7 @@ generateLastITableAndITableInstructions(TR::CodeGenerator * cg, TR::Node * callN
       else
          {
          // If lastIpicMethodRegister exist, it should have a non NULL value. Otherwise the PIC slots are not fully populated.
-         cursor = generateRRInstruction(cg, TR::InstOpCode::LTGR, callNode, lastIpicMethodRegister, lastIpicMethodRegister, cursor);
-         cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNZ, callNode, entryLabel, cursor);
+         cursor = generateRIEInstruction(cg, TR::InstOpCode::CGIJ, callNode, lastIpicMethodRegister, 0, entryLabel, TR::InstOpCode::COND_BNE, cursor);
          }
       TR_S390OutOfLineCodeSection *outlinedITableCheckSequence = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(entryLabel, exitLabel, cg);
       cg->getS390OutOfLineCodeSectionList().push_front(outlinedITableCheckSequence);
