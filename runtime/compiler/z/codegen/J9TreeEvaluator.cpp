@@ -4811,6 +4811,11 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::Register *dimLength1 = cg->allocateRegister();
    TR::Register *dimLength2 = cg->allocateRegister();
    TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
+   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,4,cg);
+   dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dimLength2, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    //Estimate size
    //EHSAN
 
@@ -4893,7 +4898,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, resultReg2);
 
    //done
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel);
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel, dependencies);
    static bool breakAftereMultiArray = feGetEnv("TR_breakAftereMultiArray") != NULL;
    if (breakAftereMultiArray)
       generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
