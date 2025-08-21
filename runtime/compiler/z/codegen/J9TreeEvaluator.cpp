@@ -4854,7 +4854,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //Alloc first dim:
    //write class TODO:fix for non com refs!
-   generateRXInstruction(cg, TR::InstOpCode::ST, node, resultReg, generateS390MemoryReference(resultReg, 0, cg));
+   generateRXInstruction(cg, TR::InstOpCode::ST, node, classReg, generateS390MemoryReference(resultReg, 0, cg));
    //Set length
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(resultReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
    //Size point to start of secend dim:
