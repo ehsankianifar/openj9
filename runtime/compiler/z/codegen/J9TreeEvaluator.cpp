@@ -4828,11 +4828,11 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //fist dim ASSUME no overflow over 32 bits TODO: add check for length
    // high side has fist dim low side has second dim
-   generateRXInstruction(cg, TR::InstOpCode::LG, node, dimLength2, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   generateRXInstruction(cg, TR::InstOpCode::LGF, node, dimLength2, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   generateRXInstruction(cg, TR::InstOpCode::LGF, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 4, cg));
    // multipli element size
+   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength1, dimLength1, trailingZeroes(elementSize));
    generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength2, dimLength2, trailingZeroes(elementSize));
-   generateRRInstruction(cg, TR::InstOpCode::LR, node, dimLength1, dimLength2);
-   generateRSInstruction(cg, TR::InstOpCode::SRLG, node, dimLength2, dimLength2, 32);
    // Add header size and align
    generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength1, headerSize + alignmentConstant - 1);
    generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant);
