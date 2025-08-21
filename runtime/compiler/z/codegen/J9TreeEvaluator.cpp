@@ -4821,11 +4821,11 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //fist dim ASSUME no overflow over 32 bits TODO: add check for length
    // high side has fist dim low side has second dim
-   generateRXInstruction(cg, TR::InstOpCode::LG, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   generateRXInstruction(cg, TR::InstOpCode::LG, node, dimLength2, generateS390MemoryReference(dimsPtrReg, 0, cg));
    // multipli element size
-   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength1, dimLength1, trailingZeroes(elementSize));
-   generateRRInstruction(cg, TR::InstOpCode::LR, node, dimLength2, dimLength1);
-   generateRSInstruction(cg, TR::InstOpCode::SRLG, node, dimLength1, dimLength1, 32);
+   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength2, dimLength2, trailingZeroes(elementSize));
+   generateRRInstruction(cg, TR::InstOpCode::LR, node, dimLength1, dimLength2);
+   generateRSInstruction(cg, TR::InstOpCode::SRLG, node, dimLength2, dimLength2, 32);
    // Add header size and align
    generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength1, headerSize + alignmentConstant - 1);
    generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant);
@@ -4834,7 +4834,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //Load second dim size in size reg. Total size = second dim siz * first dim length + first dim size
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dimLength2);
-   generateRXInstruction(cg, TR::InstOpCode::MSC, node, sizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg));
+   generateRXInstruction(cg, TR::InstOpCode::MSC, node, sizeReg, generateS390MemoryReference(dimsPtrReg, 4, cg));
    //Add fist dim size to total size. TODO: size can not be over 32 bits! fix it
    generateRRInstruction(cg, TR::InstOpCode::AR, node, sizeReg, dimLength1);
 
@@ -4856,7 +4856,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    //write class TODO:fix for non com refs!
    generateRXInstruction(cg, TR::InstOpCode::ST, node, classReg, generateS390MemoryReference(resultReg, 0, cg));
    //Set length
-   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(resultReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(resultReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 4, cg));
    //Size point to start of secend dim:
    generateRRRInstruction(cg, TR::InstOpCode::ALGRK, node, sizeReg, resultReg, dimLength1);
    // dim1len oint to fist 
@@ -4869,7 +4869,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, doneLabel);
    //set second dim class and length. TODO: use register or vectorize it.
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+4, cg));
-   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 4, cg));
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
 
    if (shiftAmount != 0)
       generateRSInstruction(cg, TR::InstOpCode::SRAG, node, sizeReg, sizeReg, shiftAmount);
