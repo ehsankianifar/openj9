@@ -4900,7 +4900,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(inlineAllocFaileLabel, doneLabel, cg);
    cg->getS390OutOfLineCodeSectionList().push_front(outlinedSlowPath);
    outlinedSlowPath->swapInstructionListsWithCompilation();
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel;
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
 
    TR::ILOpCodes opCode = node->getOpCodeValue();
    TR::Node::recreate(node, TR::acall);
