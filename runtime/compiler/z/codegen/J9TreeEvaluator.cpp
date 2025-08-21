@@ -4802,7 +4802,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::LabelSymbol *doneLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
 
-   int32_t elementSize = sizeofReferenceField();
+   int32_t elementSize = TR::Compiler->om.sizeofReferenceField();
    int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes(); //TODO: make sure alignment fix discontguous length.
    int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
@@ -4861,7 +4861,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    //Set length
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(resultReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
    //Size point to start of secend dim:
-   generateRRRInstruction(cg(), TR::InstOpCode::ALGRK, node, sizeReg, resultReg, dimLength1);
+   generateRRRInstruction(cg, TR::InstOpCode::ALGRK, node, sizeReg, resultReg, dimLength1);
    // dim1len oint to fist 
    generateRIEInstruction(cg, TR::InstOpCode::ALGHSIK, node, dimLength1, resultReg, 8);
 
@@ -4871,8 +4871,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, doneLabel);
    //set second dim class and length. TODO: use register or vectorize it.
-   generateSS1Instruction(cg, TR::InstOpCode::MVC, storeNode, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)));
-   generateSS1Instruction(cg, TR::InstOpCode::MVC, storeNode, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 4, cg));
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType), cg));
+   generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 4, cg));
 
    if (shiftAmount != 0)
       generateRSInstruction(cg, TR::InstOpCode::SRAG, node, sizeReg, sizeReg, shiftAmount);
