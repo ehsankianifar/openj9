@@ -4923,7 +4923,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(resultReg);
    node->setRegister(finalResult);
    //TODO: decrease ref counts.
-   return resultReg;
+   return finalResult;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
