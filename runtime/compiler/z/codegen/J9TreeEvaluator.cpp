@@ -4844,13 +4844,13 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapTop), cg));
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel);
 
+   cg->generateDebugCounter("multiNewArray/fast", 1, TR::DebugCounter::Undetermined);
    // HeapTop pass
    // TODO: does it need to be here or I can move it to the buttom?
    generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
 
    //Initialize memory
    //TODO: init memory if needed
-
 
    //Alloc first dim:
    //write class TODO:fix for non com refs!
@@ -4885,10 +4885,12 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //Slow path
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
+   cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
    TR::ILOpCodes opCode = node->getOpCodeValue();
    TR::Node::recreate(node, TR::acall);
    TR::Register *resultReg2 = TR::TreeEvaluator::performCall(node, false, cg);
    TR::Node::recreate(node, opCode);
+   generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, resultReg2);
 
    //done
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel);
@@ -4989,6 +4991,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    generateRXInstruction(cg, TR::InstOpCode::CLG, node, temp1Reg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapTop), cg));
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, oolJumpLabel);
    iComment("Branch to oolJumpLabel if there isn't enough space for a 0 size array.");
+   cg->generateDebugCounter("multiNewArray/fast2-1", 1, TR::DebugCounter::Undetermined);
 
    // If there's enough space, then we can continue to allocate.
    generateRXInstruction(cg, TR::InstOpCode::STG, node, temp1Reg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
@@ -5075,6 +5078,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, oolJumpLabel);
    iComment("Branch to oolJumpLabel if we don't have enough space for both 1st and 2nd dim.");
+   cg->generateDebugCounter("multiNewArray/fast2-2", 1, TR::DebugCounter::Undetermined);
 
    // We have enough space, so proceed with the allocation.
    generateRXInstruction(cg, TR::InstOpCode::STG, node, temp2Reg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
@@ -5220,6 +5224,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Node::recreate(node, opCode);
 
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, targetReg, targetReg2);
+   cg->generateDebugCounter("multiNewArray/slow2", 1, TR::DebugCounter::Undetermined);
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, cFlowRegionDone);
    outlinedSlowPath->swapInstructionListsWithCompilation();
 
@@ -5273,6 +5278,7 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
       }
    else
       {
+      cg->generateDebugCounter("multiNewArray/slow0", 1, TR::DebugCounter::Undetermined);
       if (comp->getOption(TR_TraceCG))
          {
          traceMsg(comp, "Disabling inline allocations for multianewarray of dim %d\n", nDims);
