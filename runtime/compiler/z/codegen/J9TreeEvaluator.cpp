@@ -4818,9 +4818,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    if (breakBeforeMultiArray)
       generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
 
-   // reset size.
-   generateRRInstruction(cg, TR::InstOpCode::XR, node, sizeReg, sizeReg);
-
 
    //fist dim ASSUME no overflow over 32 bits TODO: add check for length
    // high side has fist dim low side has second dim
@@ -4836,7 +4833,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength2, -alignmentConstant);
 
    //Load second dim size in size reg. Total size = second dim siz * first dim length + first dim size
-   generateRRInstruction(cg, TR::InstOpCode::LR, node, sizeReg, dimLength2);
+   generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dimLength2);
    generateRXInstruction(cg, TR::InstOpCode::MSC, node, sizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg));
    //Add fist dim size to total size. TODO: size can not be over 32 bits! fix it
    generateRRInstruction(cg, TR::InstOpCode::AR, node, sizeReg, dimLength1);
