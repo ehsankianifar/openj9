@@ -4810,12 +4810,14 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::Register *sizeReg = cg->allocateRegister();
    TR::Register *dimLength1 = cg->allocateRegister();
    TR::Register *dimLength2 = cg->allocateRegister();
-   TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
-   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,4,cg);
+   TR::Register *resultReg = cg->allocateRegister();
+   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,7,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength2, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
    //Estimate size
    //EHSAN
 
@@ -4888,17 +4890,29 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRIInstruction(cg, TR::InstOpCode::AGHI, node, dimLength1, 4);
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, secondDimLabel);
 
-   //Slow path
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
-   cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
-   TR::ILOpCodes opCode = node->getOpCodeValue();
-   TR::Node::recreate(node, TR::acall);
-   TR::Register *resultReg2 = TR::TreeEvaluator::performCall(node, false, cg);
-   TR::Node::recreate(node, opCode);
-   generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, resultReg2);
 
    //done
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel, dependencies);
+   TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
+   generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
+
+   // Generate the OOL code before final bookkeeping.
+   TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(inlineAllocFaileLabel, doneLabel, cg);
+   cg->getS390OutOfLineCodeSectionList().push_front(outlinedSlowPath);
+   outlinedSlowPath->swapInstructionListsWithCompilation();
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel;
+
+   TR::ILOpCodes opCode = node->getOpCodeValue();
+   TR::Node::recreate(node, TR::acall);
+   TR::Register *slowResultReg = TR::TreeEvaluator::performCall(node, false, cg);
+   TR::Node::recreate(node, opCode);
+
+   generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, slowResultReg);
+   cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, doneLabel);
+   outlinedSlowPath->swapInstructionListsWithCompilation();
+
+
    static bool breakAftereMultiArray = feGetEnv("TR_breakAftereMultiArray") != NULL;
    if (breakAftereMultiArray)
       generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
@@ -4906,7 +4920,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(sizeReg);
    cg->stopUsingRegister(dimLength1);
    cg->stopUsingRegister(dimLength2);
-   node->setRegister(resultReg);
+   cg->stopUsingRegister(resultReg);
+   node->setRegister(finalResult);
    //TODO: decrease ref counts.
    return resultReg;
 }
