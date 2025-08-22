@@ -4928,10 +4928,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(dimLength2);
    cg->stopUsingRegister(resultReg);
    node->setRegister(finalResult);
-
-   cg->decReferenceCount(node->getFirstChild());
-   cg->decReferenceCount(node->getSecondChild());
-   cg->decReferenceCount(node->getThirdChild());
    //TODO: decrease ref counts.
    return finalResult;
 }
