@@ -4817,7 +4817,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::Register *dimLength1 = cg->allocateRegister();
    TR::Register *dimLength2 = cg->allocateRegister();
    TR::Register *resultReg = cg->allocateRegister();
-   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,7,cg);
+   TR::Register *loopCountReg = cg->allocateRegister();
+   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,8,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength2, TR::RealRegister::AssignAny);
@@ -4825,6 +4826,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(loopCountReg, TR::RealRegister::AssignAny);
    //Estimate size
    //EHSAN
 
@@ -4879,11 +4881,16 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    // dim1len oint to fist 
    generateRIEInstruction(cg, TR::InstOpCode::ALGHSIK, node, dimLength1, resultReg, 8);
 
+   generateRXInstruction(cg, TR::InstOpCode::LGF, node, loopCountReg, generateS390MemoryReference(dimsPtrReg, 4, cg));
+
 
    //Start setting second dim:
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
-   generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
-   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, controlFlowEndLabel);
+
+
+   //generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
+   generateRIInstruction(cg, TR::InstOpCode::AHI, node, loopCountReg, -1);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BL, node, controlFlowEndLabel);
    //set second dim class and length. TODO: use register or vectorize it.
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+4, cg));
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
@@ -4932,6 +4939,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(sizeReg);
    cg->stopUsingRegister(dimLength1);
    cg->stopUsingRegister(dimLength2);
+   cg->stopUsingRegister(loopCountReg);
    cg->stopUsingRegister(resultReg);
    //node->setRegister(resultReg);
    //return resultReg;
