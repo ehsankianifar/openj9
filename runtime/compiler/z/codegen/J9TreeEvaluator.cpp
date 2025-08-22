@@ -4799,6 +4799,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::Register *classReg = cg->evaluate(node->getThirdChild());
    TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
    TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
+   TR::LabelSymbol *slowPathLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *doneLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
 
@@ -4849,7 +4850,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRXInstruction(cg, TR::InstOpCode::LG, node, resultReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
    generateRRInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg);
    generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapTop), cg));
-   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel);
+   static bool alwaysFailHeapTest = feGetEnv("TR_alwaysFailHeapTest") != NULL;
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, alwaysFailHeapTest ? TR::InstOpCode::COND_B : TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel);
 
    cg->generateDebugCounter("multiNewArray/fast", 1, TR::DebugCounter::Undetermined);
    // HeapTop pass
@@ -4890,6 +4892,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRIInstruction(cg, TR::InstOpCode::AGHI, node, dimLength1, 4);
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, secondDimLabel);
 
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, slowPathLabel);
 
    //done
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel, dependencies);
@@ -4897,10 +4901,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
 
    // Generate the OOL code before final bookkeeping.
-   TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(inlineAllocFaileLabel, doneLabel, cg);
+   TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, doneLabel, cg);
    cg->getS390OutOfLineCodeSectionList().push_front(outlinedSlowPath);
    outlinedSlowPath->swapInstructionListsWithCompilation();
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, slowPathLabel);
 
    TR::ILOpCodes opCode = node->getOpCodeValue();
    TR::Node::recreate(node, TR::acall);
