@@ -4816,7 +4816,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::Register *sizeReg = cg->allocateRegister();
    TR::Register *dimLength1 = cg->allocateRegister();
    TR::Register *dimLength2 = cg->allocateRegister();
-   TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
+   TR::Register *resultReg = cg->allocateRegister();
    TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,7,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
@@ -4905,8 +4905,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    //done
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowEndLabel, dependencies);
-   //TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
-   //generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
+   TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
+   generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
 
    // Generate the OOL code before final bookkeeping.
    TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, controlFlowEndLabel, cg);
@@ -4932,9 +4932,11 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(sizeReg);
    cg->stopUsingRegister(dimLength1);
    cg->stopUsingRegister(dimLength2);
-   //cg->stopUsingRegister(resultReg);
-   node->setRegister(resultReg);
-   return resultReg;
+   cg->stopUsingRegister(resultReg);
+   //node->setRegister(resultReg);
+   //return resultReg;
+   node->setRegister(finalResult);
+   return finalResult;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
