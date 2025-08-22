@@ -4795,13 +4795,12 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
 ///////////////////////////////////////////////////////////////////////////////////////
 static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node, TR::CodeGenerator *cg)
 {
-   TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
-   TR::Register *dimReg = cg->evaluate(node->getSecondChild());
-   TR::Register *classReg = cg->evaluate(node->getThirdChild());
-   TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
    TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *slowPathLabel = generateLabelSymbol(cg);
-   TR::LabelSymbol *doneLabel = generateLabelSymbol(cg);
+   TR::LabelSymbol *controlFlowEndLabel = generateLabelSymbol(cg);
+   controlFlowEndLabel->setEndInternalControlFlow();
+   TR::LabelSymbol *controlFlowStartLabel = generateLabelSymbol(cg);
+   controlflowStartLabel->setStartInternalControlFlow();
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
 
    int32_t elementSize = TR::Compiler->om.sizeofReferenceField();
@@ -4809,10 +4808,15 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes(); //TODO: make sure alignment fix discontguous length.
    int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
 
+   TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
+   TR::Register *dimReg = cg->evaluate(node->getSecondChild());
+   TR::Register *classReg = cg->evaluate(node->getThirdChild());
+   TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
+
    TR::Register *sizeReg = cg->allocateRegister();
    TR::Register *dimLength1 = cg->allocateRegister();
    TR::Register *dimLength2 = cg->allocateRegister();
-   TR::Register *resultReg = cg->allocateRegister();
+   TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
    TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,7,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
@@ -4823,6 +4827,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
    //Estimate size
    //EHSAN
+
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowStartLabel);
 
    static bool breakBeforeMultiArray = feGetEnv("TR_breakBeforeMultiArray") != NULL;
    if (breakBeforeMultiArray)
@@ -4877,7 +4883,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    //Start setting second dim:
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
    generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, offsetof(J9VMThread, heapAlloc), cg));
-   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, doneLabel);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNL, node, controlFlowEndLabel);
    //set second dim class and length. TODO: use register or vectorize it.
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 0, cg), generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+4, cg));
    generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 3, generateS390MemoryReference(sizeReg, 4, cg), generateS390MemoryReference(dimsPtrReg, 0, cg));
@@ -4898,12 +4904,12 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, slowPathLabel);
 
    //done
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, doneLabel, dependencies);
-   TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
-   generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
+   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowEndLabel, dependencies);
+   //TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
+   //generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg);
 
    // Generate the OOL code before final bookkeeping.
-   TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, doneLabel, cg);
+   TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, controlFlowEndLabel, cg);
    cg->getS390OutOfLineCodeSectionList().push_front(outlinedSlowPath);
    outlinedSlowPath->swapInstructionListsWithCompilation();
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, slowPathLabel);
@@ -4915,7 +4921,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
 
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, slowResultReg);
    cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
-   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, doneLabel);
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, controlFlowEndLabel);
    outlinedSlowPath->swapInstructionListsWithCompilation();
 
 
@@ -4926,10 +4932,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    cg->stopUsingRegister(sizeReg);
    cg->stopUsingRegister(dimLength1);
    cg->stopUsingRegister(dimLength2);
-   cg->stopUsingRegister(resultReg);
-   node->setRegister(finalResult);
-   //TODO: decrease ref counts.
-   return finalResult;
+   //cg->stopUsingRegister(resultReg);
+   node->setRegister(resultReg);
+   return resultReg;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
