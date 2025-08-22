@@ -4796,6 +4796,7 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
 static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node, TR::CodeGenerator *cg)
 {
    TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
+   TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->evaluate(node->getThirdChild());
    TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
    TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
@@ -4819,6 +4820,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
    //Estimate size
    //EHSAN
 
