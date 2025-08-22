@@ -4800,7 +4800,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    TR::LabelSymbol *controlFlowEndLabel = generateLabelSymbol(cg);
    controlFlowEndLabel->setEndInternalControlFlow();
    TR::LabelSymbol *controlFlowStartLabel = generateLabelSymbol(cg);
-   controlflowStartLabel->setStartInternalControlFlow();
+   controlFlowStartLabel->setStartInternalControlFlow();
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
 
    int32_t elementSize = TR::Compiler->om.sizeofReferenceField();
