@@ -4813,7 +4813,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    uint32_t componentSize = (uint32_t)compClazz->flattenedElementSize;
    traceMsg(cg->comp(), "EHSAN: clazz:%p compClazz:%p size:%d\n",clazz, compClazz, componentSize);
 
-   
+
    TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
    TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->evaluate(node->getThirdChild());
@@ -4849,7 +4849,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    generateRXInstruction(cg, TR::InstOpCode::LGF, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 4, cg));
    // multipli element size
    generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength1, dimLength1, trailingZeroes(elementSize));
-   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength2, dimLength2, trailingZeroes(elementSize));
+   generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength2, dimLength2, trailingZeroes(componentSize));
    // Add header size and align
    generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength1, headerSize + alignmentConstant - 1);
    generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant);
