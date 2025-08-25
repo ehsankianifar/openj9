@@ -5311,9 +5311,11 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    // The number of dimensions should always be an iconst
    TR_ASSERT_FATAL(secondChild->getOpCodeValue() == TR::iconst, "dims of multianewarray must be iconst");
+   uint32_t nDims = secondChild->get32bitIntegralValue();
+   cg->generateDebugCounter(TR::DebugCounter::debugCounterName(cg->comp(), "multiNewArraySize/%d", nDims), 1, TR::DebugCounter::Undetermined);
 
    // Only generate inline code if nDims > 1
-   uint32_t nDims = secondChild->get32bitIntegralValue();
+
    static bool useNew = feGetEnv("TR_useNewMultiAlloc") != NULL;
    if (useNew && (nDims == 2) && node->getThirdChild()->getSymbol()->isStatic())
       {
