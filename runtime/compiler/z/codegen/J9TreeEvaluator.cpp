@@ -4811,8 +4811,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators2(TR::Node *node
    J9ArrayClass* clazz = (J9ArrayClass*)node->getThirdChild()->getSymbol()->getStaticSymbol()->getStaticAddress();
    J9ArrayClass* compClazz = (J9ArrayClass*)clazz->componentType;
    uint32_t componentSize = (uint32_t)compClazz->flattenedElementSize;
-   printf("EHSAN: clazz:%p compClazz:%p size:%d",clazz, compClazz, componentSize);
+   traceMsg(cg->comp(), "EHSAN: clazz:%p compClazz:%p size:%d\n",clazz, compClazz, componentSize);
 
+   
    TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
    TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->evaluate(node->getThirdChild());
