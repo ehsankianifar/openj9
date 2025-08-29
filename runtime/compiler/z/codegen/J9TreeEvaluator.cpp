@@ -4810,7 +4810,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::LabelSymbol *heapTopTestLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *zeroSecondDimLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *memoryInitializationexrlTargetLabel = generateLabelSymbol(cg);
-   TR::Instruction cursor = NULL;
+   TR::Instruction *cursor = NULL;
 
    int32_t elementSize = TR::Compiler->om.sizeofReferenceField();
    int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
