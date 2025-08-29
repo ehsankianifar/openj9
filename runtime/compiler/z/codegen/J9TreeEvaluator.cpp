@@ -4883,7 +4883,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant);
 
    generateRRInstruction(cg, TR::InstOpCode::ALR, node, sizeReg, dimLength1);
-   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLGFI, node, sizeReg,
+   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLG, node, sizeReg,
       static_cast<int32_t>(cg->getMaxObjectSizeGuaranteedNotToOverflow()), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */);
 
    // HeapTop test
@@ -4924,7 +4924,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    generateRXInstruction(cg, TR::InstOpCode::ST, node, miscellaneousReg, generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg));
 
    // If number of leaf arrays is zero, jump to the end.
-   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLFI, node, miscellaneousReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel, false /* needsCC */);
+   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CL, node, miscellaneousReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel, false /* needsCC */);
    
    generateRREInstruction(cg, TR::InstOpCode::AGR, node, dimLength1, resultReg);// Dim 1 is pointing to start of dim2!
    //Load component class to class register. In case of comp refs, class is in high order!
