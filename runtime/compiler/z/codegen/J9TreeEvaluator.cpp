@@ -4860,7 +4860,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    // If dimention length is zero, resulting array have this size:
    generateRIInstruction(cg, TR::InstOpCode::LGHI, node, sizeReg,
-      ((int32_t)(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes())+alignmentConstant-1) & ~alignmentConstant);
+      (((int32_t)(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes())+alignmentConstant-1) & -alignmentConstant));
    generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 4, cg));
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, heapTopTestLabel);
 
