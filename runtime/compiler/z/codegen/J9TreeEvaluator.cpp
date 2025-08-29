@@ -4799,6 +4799,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Compilation *comp = cg->comp();
    TR_Debug *compDebug = comp->getDebug();
    TR_ASSERT_FATAL(comp->target().is64Bit(), "multianewArrayEvaluator is only supported on 64-bit JVMs!");
+    TR_J9VMBase *fej9 = comp->fej9();
    TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *slowPathLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *controlFlowEndLabel = generateLabelSymbol(cg);
@@ -4923,7 +4924,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    generateRXInstruction(cg, TR::InstOpCode::ST, node, miscellaneousReg, generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg));
 
    // If number of leaf arrays is zero, jump to the end.
-   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLFI, node, miscellaneousReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel false /* needsCC */);
+   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLFI, node, miscellaneousReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel, false /* needsCC */);
    
    generateRREInstruction(cg, TR::InstOpCode::AGR, node, dimLength1, resultReg);// Dim 1 is pointing to start of dim2!
    //Load component class to class register. In case of comp refs, class is in high order!
@@ -4969,7 +4970,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    if (needInitialization)
    {
       generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationexrlTargetLabel);
-      generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, headerSize, cg), generateS390MemoryReference(resultReg, headerSize, cg), iCursor);
+      generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, headerSize, cg), generateS390MemoryReference(resultReg, headerSize, cg));
    }
 
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel);
@@ -5004,7 +5005,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cg->stopUsingRegister(sizeReg);
    cg->stopUsingRegister(dimLength1);
    cg->stopUsingRegister(dimLength2);
-   cg->stopUsingRegister(loopCountReg);
+   cg->stopUsingRegister(miscellaneousReg);
    cg->stopUsingRegister(resultReg);
    //node->setRegister(resultReg);
    //return resultReg;
