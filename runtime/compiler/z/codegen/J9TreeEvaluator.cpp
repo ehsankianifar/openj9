@@ -4978,6 +4978,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       generateRRFInstruction(cg, TR::InstOpCode::AHHHR, node, miscellaneousReg, miscellaneousReg, dimLength2);
    }
    generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, miscellaneousReg, secondDimLabel);
+   //done
+   generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, controlFlowEndLabel);
 
    if (needInitialization)
    {
