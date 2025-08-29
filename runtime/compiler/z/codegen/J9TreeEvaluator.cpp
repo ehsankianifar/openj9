@@ -4889,8 +4889,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    cursor = generateRRInstruction(cg, TR::InstOpCode::ALR, node, sizeReg, dimLength1);
    iComment("Now we have full size.");
-   generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLG, node, sizeReg,
-      static_cast<int32_t>(cg->getMaxObjectSizeGuaranteedNotToOverflow()), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */);
+   //TODO: Make sure we need this check and use correct instruction if we do!
+   //generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLG, node, sizeReg,
+   //   static_cast<int32_t>(cg->getMaxObjectSizeGuaranteedNotToOverflow()), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */);
 
    // HeapTop test
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, heapTopTestLabel);
