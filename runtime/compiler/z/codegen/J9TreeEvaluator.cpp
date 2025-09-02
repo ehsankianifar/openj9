@@ -5417,7 +5417,7 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    if ((nDims == 2) && node->getThirdChild()->getSymbol()->isStatic()
          && cg->comp()->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
-         && cg->comp()->suppressAllocationInlining())
+         && !cg->comp()->suppressAllocationInlining())
       {
       return generateMultianewArrayWithInlineAllocators(node, cg);
       }
