@@ -4928,25 +4928,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
             offset+=255;
          }
       }
-
-      int loops = siz
-      TR::LabelSymbol *memoryDirtyEndLabel = generateLabelSymbol(cg);
-      TR::LabelSymbol * memoryDirtyLoopLabel = generateLabelSymbol(cg);
-      TR::LabelSymbol * memoryDirtyexrlTargetLabel = generateLabelSymbol(cg);
-      cursor = generateRREInstruction(cg, TR::InstOpCode::SGR, node, sizeReg, resultReg, cursor);
-      iComment("start memory init.");
-      cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, sizeReg, -(headerSize+1), cursor);
-      cursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, sizeReg, memoryDirtyexrlTargetLabel, cursor);
-      cursor = generateRSInstruction(cg, TR::InstOpCode::SRAG, node, miscellaneousReg, sizeReg, 8, cursor);
-      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, memoryDirtyEndLabel, cursor);
-      cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, sizeReg, 0xff, cursor);
-      cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg, cursor);
-
-      cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryDirtyLoopLabel, cursor);
-      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(sizeReg, headerSize+1, cg), generateS390MemoryReference(sizeReg, headerSize+1, cg), cursor);
-      cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg, generateS390MemoryReference(sizeReg, 256, cg), cursor);
-      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, miscellaneousReg, memoryDirtyLoopLabel, cursor);
-      cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryDirtyEndLabel, cursor);
    }
 
    if (needInitialization)
