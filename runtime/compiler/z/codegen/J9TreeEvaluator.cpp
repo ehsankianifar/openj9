@@ -5025,12 +5025,12 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    outlinedSlowPath->swapInstructionListsWithCompilation();
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, slowPathLabel);
 
+   J9::Z::CHelperLinkage *helperLink = static_cast<J9::Z::CHelperLinkage*>(cg->getLinkage(TR_CHelper));
    TR::ILOpCodes opCode = node->getOpCodeValue();
    TR::Node::recreate(node, TR::acall);
-   TR::Register *slowResultReg = TR::TreeEvaluator::performCall(node, false, cg);
+   resultReg = helperLink->buildDirectDispatch(node, resultReg);
    TR::Node::recreate(node, opCode);
 
-   generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, slowResultReg);
    cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, controlFlowEndLabel);
    outlinedSlowPath->swapInstructionListsWithCompilation();
