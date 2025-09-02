@@ -4906,7 +4906,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    static bool alwaysFailHeapTest = feGetEnv("TR_alwaysFailHeapTest") != NULL;
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, alwaysFailHeapTest ? TR::InstOpCode::COND_B : TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel, cursor);
 
-   cursor = cg->generateDebugCounter("multiNewArray/fast", 1, TR::DebugCounter::Undetermined, 0, 1, cursor);
+   cursor = cg->generateDebugCounter(cursor ,"multiNewArray/fast");
 
    cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Heap top test pass. Update heap alloc.");
