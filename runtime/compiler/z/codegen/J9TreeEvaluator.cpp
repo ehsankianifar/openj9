@@ -4921,10 +4921,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       {
          sizeToDirty-=2;
          int offset=(sizeToDirty % 256)+2;
-         cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, sizeToDirty%256, generateS390MemoryReference(resultReg, 2, cg), generateS390MemoryReference(resultReg, 1, cg), cursor);
+         cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, sizeToDirty%256, generateS390MemoryReference(resultReg, 1, cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
          while(offset < sizeToDirty)
          {
-            cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 255, generateS390MemoryReference(resultReg, offset, cg), generateS390MemoryReference(resultReg, 1, cg), cursor);
+            cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 255, generateS390MemoryReference(resultReg, offset, cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
             offset+=255;
          }
       }
