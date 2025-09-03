@@ -4809,7 +4809,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *heapTopTestLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *zeroSecondDimLabel = generateLabelSymbol(cg);
-   TR::LabelSymbol *memoryInitializationexrlTargetLabel = generateLabelSymbol(cg);
+   TR::LabelSymbol *memoryInitializationExrlTargetLabel = generateLabelSymbol(cg);
    TR::Instruction *cursor = NULL;
 
    int32_t elementSize = TR::Compiler->om.sizeofReferenceField();
@@ -4832,194 +4832,191 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    uint32_t componentSize = (uint32_t)compClazz->flattenedElementSize;
    traceMsg(cg->comp(), "EHSAN: clazz:%p compClazz:%p size:%d\n",clazz, compClazz, componentSize);
 
-
+   /********************************************* Register setup *********************************************/
    TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
+   // Need dimReg for helper.
    TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->gprClobberEvaluate(node->getThirdChild());
    TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
 
    TR::Register *sizeReg = cg->allocateRegister();
-   TR::Register *dimLength1 = cg->allocateRegister();
-   TR::Register *dimLength2 = cg->allocateRegister();
+   TR::Register *dim1SizeReg = cg->allocateRegister();
+   TR::Register *dim2SizeReg = cg->allocateRegister();
    TR::Register *resultReg = cg->allocateRegister();
    TR::Register *miscellaneousReg = cg->allocateRegister();
    TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,8,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
-   dependencies->addPostCondition(dimLength1, TR::RealRegister::AssignAny);
-   dependencies->addPostCondition(dimLength2, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dim1SizeReg, TR::RealRegister::AssignAny);
+   dependencies->addPostCondition(dim2SizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(miscellaneousReg, TR::RealRegister::AssignAny);
-   //Estimate size
-   //EHSAN2
 
+   // TODO: should I start the control flow after hep top test?
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowStartLabel);
 
    static bool breakBeforeMultiArray = feGetEnv("TR_breakBeforeMultiArray") != NULL;
    if (breakBeforeMultiArray)
       generateS390EInstruction(cg, TR::InstOpCode::BREAK, node);
 
-
-   // If dimention length is zero, resulting array have this size:
+   /********************************************* Calculate size *********************************************/
+   // If any dimension length is zero, resulting array have discontiguous array size
    cursor = generateRIInstruction(cg, TR::InstOpCode::LGHI, node, sizeReg,
       (((int32_t)(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes())+alignmentConstant-1) & -alignmentConstant), cursor);
    iComment("Load discontinuous array size.");
-   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dimLength1, generateS390MemoryReference(dimsPtrReg, 4, cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim1SizeReg, generateS390MemoryReference(dimsPtrReg, 4, cg), cursor);
    iComment("Load 1st dim length.");
+   // If first dimension length is zero, there is only one discontiguous array for dim 1.
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, heapTopTestLabel, cursor);
 
-   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dimLength2, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim2SizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
    iComment("Load 2st dim length.");
+   // If the second dimesion length is zero, second dim size is one discontiguous array.
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, zeroSecondDimLabel, cursor);
-
+   // size = (element size * dimension length) + header size. final size must get aligned.
    if (componentSize > 1)
-      cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength2, dimLength2, trailingZeroes(componentSize), cursor);
-   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength2, headerSize + alignmentConstant - 1, cursor);
-   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength2, -alignmentConstant, cursor);
-   cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dimLength2, cursor);
+      cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim2SizeReg, dim2SizeReg, trailingZeroes(componentSize), cursor);
+   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim2SizeReg, headerSize + alignmentConstant - 1, cursor);
+   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim2SizeReg, -alignmentConstant, cursor);
+   cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dim2SizeReg, cursor);
 
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, zeroSecondDimLabel, cursor);
-   cursor = generateRRInstruction(cg, TR::InstOpCode::LR, node, dimLength2, sizeReg, cursor);//Just in case jumping from zero check
-   cursor = generateRREInstruction(cg, TR::InstOpCode::MSGR, node, sizeReg, dimLength1, cursor);//can overflow
-   //TODO: if we should worry about overflow, use MSGRKC and add branch when overflow!
-   //generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRNP, node, inlineAllocFaileLabel);
+   // If jumping from zero second dim match, set second dim size to discontiguous. Otherwise this wont change values.
+   cursor = generateRRInstruction(cg, TR::InstOpCode::LR, node, dim2SizeReg, sizeReg, cursor);
+   // Total size = (second dim size * number of second dim arrays) + first dim size.
+   cursor = generateRREInstruction(cg, TR::InstOpCode::MSGR, node, sizeReg, dim1SizeReg, cursor);
+   // TODO: if we should worry about overflow, use MSGRKC and add branch when overflow!
+   //cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRNP, node, inlineAllocFaileLabel, cursor);
 
-   cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dimLength1, dimLength1, trailingZeroes(elementSize), cursor);
-   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dimLength1, headerSize + alignmentConstant - 1, cursor);
-   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dimLength1, -alignmentConstant, cursor);
+   // size = (element size * dimension length) + header size. final size must get aligned.
+   cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim1SizeReg, dim1SizeReg, trailingZeroes(elementSize), cursor);
+   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim1SizeReg, headerSize + alignmentConstant - 1, cursor);
+   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim1SizeReg, -alignmentConstant, cursor);
 
-   cursor = generateRRInstruction(cg, TR::InstOpCode::ALR, node, sizeReg, dimLength1, cursor);
-   iComment("Now we have full size.");
-   //TODO: Make sure we need this check and use correct instruction if we do!
-   //generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CLG, node, sizeReg,
-   //   static_cast<int32_t>(cg->getMaxObjectSizeGuaranteedNotToOverflow()), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */);
+   cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, dim1SizeReg, cursor);
+   iComment("Total required size in sizeReg.");
+   //Chech if size is too big for inline allocation.
+   cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CG, node, sizeReg,
+      cg->getMaxObjectSizeGuaranteedNotToOverflow(), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */, cursor);
 
-   // HeapTop test
+   /********************************************* heap top test *********************************************/
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, heapTopTestLabel, cursor);
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, resultReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Set result reg.");
    cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg, cursor);
-   cursor = generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapTopOffset, cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::CG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapTopOffset, cg), cursor);
 
-   static bool alwaysFailHeapTest = feGetEnv("TR_alwaysFailHeapTest") != NULL;
-   cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, alwaysFailHeapTest ? TR::InstOpCode::COND_B : TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel, cursor);
+   cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, inlineAllocFaileLabel, cursor);
 
+   /********************************************* Allocate Object *********************************************/
    cursor = cg->generateDebugCounter(cursor ,"multiNewArray/fast");
-
+   // Update heap alloc.
    cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Heap top test pass. Update heap alloc.");
 
-      //Just dirty memory! must be 0 ot grater than 1
-   if (forceMemoryInit)
-   {
-      needInitialization = true;
-      int sizeToDirty = atoi(forceMemoryInit);
-      cursor = generateSIInstruction(cg, TR::InstOpCode::MVI, node, generateS390MemoryReference(resultReg, 0, cg), 0xFF, cursor);
-      if(sizeToDirty != 0)
-      {
-         sizeToDirty-=2;
-         int offset=(sizeToDirty % 256)+2;
-         cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, sizeToDirty%256, generateS390MemoryReference(resultReg, 1, cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
-         while(offset < sizeToDirty)
-         {
-            cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 255, generateS390MemoryReference(resultReg, offset, cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
-            offset+=255;
-         }
-      }
-   }
-
+   /********************************************* Zero initialize memory *********************************************/
    if (needInitialization)
    {
       TR::LabelSymbol *memoryInitializationEndLabel = generateLabelSymbol(cg);
       TR::LabelSymbol * memoryInitializationLoopLabel = generateLabelSymbol(cg);
       cursor = generateRREInstruction(cg, TR::InstOpCode::SGR, node, sizeReg, resultReg, cursor);
-      iComment("start memory init.");
+      iComment("start memory initialization.");
       cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, sizeReg, -(headerSize+1), cursor);
-      cursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, sizeReg, memoryInitializationexrlTargetLabel, cursor);
+      cursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, sizeReg, memoryInitializationExrlTargetLabel, cursor);
       cursor = generateRSInstruction(cg, TR::InstOpCode::SRAG, node, miscellaneousReg, sizeReg, 8, cursor);
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, memoryInitializationEndLabel, cursor);
       cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, sizeReg, 0xff, cursor);
       cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg, cursor);
 
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationLoopLabel, cursor);
-      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(sizeReg, headerSize+1, cg), generateS390MemoryReference(sizeReg, headerSize+1, cg), cursor);
+      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(sizeReg, headerSize+1, cg),
+         generateS390MemoryReference(sizeReg, headerSize+1, cg), cursor);
       cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg, generateS390MemoryReference(sizeReg, 256, cg), cursor);
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, miscellaneousReg, memoryInitializationLoopLabel, cursor);
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationEndLabel, cursor);
    }
 
+   /********************************************* First dimesion class and length *********************************************/
+   // load first dim length in lower 32bits and second dim length in higher 32bits.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, miscellaneousReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
-   //Alloc first dim:
-   cursor = generateRXInstruction(cg, use64BitClasses ? TR::InstOpCode::STG : TR::InstOpCode::ST, node, classReg, generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
-   cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, miscellaneousReg, generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
+   // Fist dim class and length:
+   cursor = generateRXInstruction(cg, use64BitClasses ? TR::InstOpCode::STG : TR::InstOpCode::ST, node, classReg,
+      generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, miscellaneousReg, generateS390MemoryReference(resultReg,
+      (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
 
+   /********************************************* Add leaf arrays (Second dimension) *********************************************/
    // If number of leaf arrays is zero, jump to the end.
    cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CL, node, miscellaneousReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel, false /* needsCC */, cursor);
    
-   cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, dimLength1, resultReg, cursor);// Dim 1 is pointing to start of dim2!
-   iComment("dim1 point to the fist leaf.");
-   //Load component class to class register. In case of comp refs, class is in high order!
+   cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, dim1SizeReg, resultReg, cursor);
+   iComment("dim1SizeReg points to the fist leaf array.");
+   // Load component class to class register. In case of comp refs, class is in high order!
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, classReg, generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+(use64BitClasses ? 0 : 4), cg), cursor);
    if (!use64BitClasses)
       {
       cursor = generateRXInstruction(cg, TR::InstOpCode::L, node, classReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
       if (shiftAmount > 0)
          {
-         //Keep a compressed version of dim2 length in high order
-         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, dimLength2, dimLength2, 0, 31, 32-shiftAmount, cursor);
-         iComment("Dim2 reg has dim2 in low order and comp dim2 in high order.");
-         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, miscellaneousReg, dimLength1, 0, 31, 32-shiftAmount, cursor);
-         iComment("Misc reg had comp ref in high order and count in low order.");
+         // Keep a compressed version of dim2 size in higher 32 bits.
+         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, dim2SizeReg, dim2SizeReg, 0, 31, 32-shiftAmount, cursor);
+         iComment("Compressed dim2 size in higher 32bits.");
+         // Keep a compressed reference in higher 32bits of miscellaneousReg.
+         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, miscellaneousReg, dim1SizeReg, 0, 31, 32-shiftAmount, cursor);
+         iComment("Compressed dim2 reference in higher 32 bits.");
          }
       }
 
    cursor = generateRIInstruction(cg, TR::InstOpCode::LGHI, node, sizeReg, fej9->getOffsetOfContiguousDataAddrField(), cursor);
-   //Start setting second dim:
+   // Start setting second dim:
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
-   cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, classReg, generateS390MemoryReference(dimLength1, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, classReg, generateS390MemoryReference(dim1SizeReg,
+      (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
    if (use64BitClasses)
       {
-      // only supported on OMR_PROCESSOR_S390_Z196 onward
-      cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, miscellaneousReg, generateS390MemoryReference(dimLength1, (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
-      cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, dimLength1, generateS390MemoryReference(resultReg, sizeReg, 0, cg), cursor);
+      cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, miscellaneousReg, generateS390MemoryReference(dim1SizeReg,
+         (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
+      cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, dim1SizeReg, generateS390MemoryReference(resultReg, sizeReg, 0, cg), cursor);
       }
    else if (shiftAmount == 0)
       {
-      cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, dimLength1, generateS390MemoryReference(resultReg, sizeReg, 0, cg), cursor);
+      cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, dim1SizeReg, generateS390MemoryReference(resultReg, sizeReg, 0, cg), cursor);
       }
    else
       {
       cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, miscellaneousReg, generateS390MemoryReference(resultReg, sizeReg, 0, cg), cursor);
       }
 
-   cursor = generateRREInstruction(cg, TR::InstOpCode::AGFR, node, dimLength1, dimLength2, cursor);
+   cursor = generateRREInstruction(cg, TR::InstOpCode::AGFR, node, dim1SizeReg, dim2SizeReg, cursor);
    cursor = generateRIInstruction(cg, TR::InstOpCode::AGHI, node, sizeReg, elementSize, cursor);
    if(shiftAmount > 0)
    {
-      cursor = generateRRFInstruction(cg, TR::InstOpCode::AHHHR, node, miscellaneousReg, miscellaneousReg, dimLength2, cursor);
+      cursor = generateRRFInstruction(cg, TR::InstOpCode::AHHHR, node, miscellaneousReg, miscellaneousReg, dim2SizeReg, cursor);
    }
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, miscellaneousReg, secondDimLabel, cursor);
-   //done
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, controlFlowEndLabel, cursor);
 
+   /********************************************* Unreachable zone *********************************************/
    if (needInitialization)
    {
-      cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationexrlTargetLabel, cursor);
-      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, headerSize, cg), generateS390MemoryReference(resultReg, headerSize, cg), cursor);
+      // Keep memory EXRL target here to avoid extra branching.
+      cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationExrlTargetLabel, cursor);
+      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, headerSize, cg),
+      generateS390MemoryReference(resultReg, headerSize, cg), cursor);
    }
 
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel, cursor);
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, slowPathLabel, cursor);
 
-   //done
+   /********************************************* Merge inline and helper results *********************************************/
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowEndLabel, dependencies, cursor);
    TR::Register *finalResult = cg->allocateCollectedReferenceRegister();
    cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, finalResult, resultReg, cursor);
    iComment("Copy tmp result to final result.");
 
-   // Generate the OOL code before final bookkeeping.
+   /********************************************* OOL helper setup *********************************************/
    TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, controlFlowEndLabel, cg);
    cg->getS390OutOfLineCodeSectionList().push_front(outlinedSlowPath);
    outlinedSlowPath->swapInstructionListsWithCompilation();
@@ -5031,22 +5028,17 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Node::recreate(node, opCode);
 
    generateRRInstruction(cg, TR::InstOpCode::LGR, node, resultReg, slowResultReg);
-   cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
+   cg->generateDebugCounter("multiNewArray/slow");
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, controlFlowEndLabel);
    outlinedSlowPath->swapInstructionListsWithCompilation();
 
-
-   static bool breakAftereMultiArray = feGetEnv("TR_breakAftereMultiArray") != NULL;
-   if (breakAftereMultiArray)
-      cursor = generateS390EInstruction(cg, TR::InstOpCode::BREAK, node, cursor);
-
+   /********************************************* Done! *********************************************/
    cg->stopUsingRegister(sizeReg);
-   cg->stopUsingRegister(dimLength1);
-   cg->stopUsingRegister(dimLength2);
+   cg->stopUsingRegister(dim1SizeReg);
+   cg->stopUsingRegister(dim2SizeReg);
    cg->stopUsingRegister(miscellaneousReg);
    cg->stopUsingRegister(resultReg);
-   //node->setRegister(resultReg);
-   //return resultReg;
+
    node->setRegister(finalResult);
    return finalResult;
    #undef iComment
