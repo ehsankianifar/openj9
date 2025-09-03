@@ -4911,8 +4911,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, dim1SizeReg, cursor);
    iComment("Total required size in sizeReg.");
    //Chech if size is too big for inline allocation.
-   cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CG, node, sizeReg,
-      cg->getMaxObjectSizeGuaranteedNotToOverflow(), TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */, false /* targetIsFarAndCold */, cursor);
+   cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CG, node, sizeReg, (int32_t)(cg->getMaxObjectSizeGuaranteedNotToOverflow()),
+      TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */, false /* targetIsFarAndCold */, cursor);
 
    /********************************************* heap top test *********************************************/
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, heapTopTestLabel, cursor);
