@@ -4951,13 +4951,15 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       TR::LabelSymbol * memoryInitializationLoopLabel = generateLabelSymbol(cg);
       cursor = generateRREInstruction(cg, TR::InstOpCode::SGR, node, sizeReg, resultReg, cursor);
       iComment("start memory initialization.");
-      cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, sizeReg, -(headerSize+1), cursor);
+      // Subtract 1 to make up for XC instruction length field.
+      cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, sizeReg, -1, cursor);
       cursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, sizeReg, memoryInitializationExrlTargetLabel, cursor);
       cursor = generateRSInstruction(cg, TR::InstOpCode::SRAG, node, miscellaneousReg, sizeReg, 8, cursor);
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, memoryInitializationEndLabel, cursor);
       cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, sizeReg, 0xff, cursor);
       cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg, cursor);
-      cursor = genMemoryZeroingLoop(cg, node, cursor, sizeReg, miscellaneousReg, headerSize+1);
+      //sizeReg is pointing to the last initialized location.
+      cursor = genMemoryZeroingLoop(cg, node, cursor, sizeReg, miscellaneousReg, 1);
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationEndLabel, cursor);
    }
 
