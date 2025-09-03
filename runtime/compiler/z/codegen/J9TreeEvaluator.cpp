@@ -5028,8 +5028,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    {
       // Keep memory EXRL target here to avoid extra branching.
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationExrlTargetLabel, cursor);
-      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, headerSize, cg),
-      generateS390MemoryReference(resultReg, headerSize, cg), cursor);
+      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, 0, cg),
+      generateS390MemoryReference(resultReg, 0, cg), cursor);
    }
 
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFaileLabel, cursor);
