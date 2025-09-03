@@ -4776,6 +4776,18 @@ J9::Z::TreeEvaluator::newArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
    }
 
+
+static TR::Instruction*
+genMemoryZeroingLoop(TR::CodeGenerator* cg, TR::Node* node, TR::Instruction*& iCursor, TR::Register * addressReg, TR::Register * loopIterRegsiter, int32_t displacement = 0)
+   {
+   TR::LabelSymbol * loopStartLabel = generateLabelSymbol(cg);
+   iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, loopStartLabel, iCursor);
+   iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(addressReg, displacement, cg), generateS390MemoryReference(addressReg, displacement, cg), iCursor);
+   iCursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, addressReg, generateS390MemoryReference(addressReg, 256, cg), iCursor);
+   iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, loopIterRegsiter, loopStartLabel, iCursor);
+   return iCursor;
+   }
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // newArrayEvaluator: new array of objects
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -4832,8 +4844,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
    int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
    bool use64BitClasses = !TR::Compiler->om.generateCompressedObjectHeaders();
-
-   static char *forceMemoryInit = feGetEnv("TR_ForceMemoryInit");//TODO: remove it
 
    static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
    bool needInitialization = disableBatchClear && !node->canSkipZeroInitialization();
@@ -4947,12 +4957,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, memoryInitializationEndLabel, cursor);
       cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, sizeReg, 0xff, cursor);
       cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, resultReg, cursor);
-
-      cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationLoopLabel, cursor);
-      cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(sizeReg, headerSize+1, cg),
-         generateS390MemoryReference(sizeReg, headerSize+1, cg), cursor);
-      cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg, generateS390MemoryReference(sizeReg, 256, cg), cursor);
-      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, miscellaneousReg, memoryInitializationLoopLabel, cursor);
+      cursor = genMemoryZeroingLoop(cg, node, cursor, sizeReg, miscellaneousReg, headerSize+1);
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationEndLabel, cursor);
    }
 
@@ -10252,15 +10257,6 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
       }
    }
 
-static void
-genMemoryZeroingLoop(TR::CodeGenerator* cg, TR::Node* node, TR::Instruction*& iCursor, TR::Register * addressReg, TR::Register * loopIterRegsiter)
-   {
-   TR::LabelSymbol * loopStartLabel = generateLabelSymbol(cg);
-   iCursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, loopStartLabel);
-   iCursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 255, generateS390MemoryReference(addressReg, 0, cg), generateS390MemoryReference(addressReg, 0, cg), iCursor);
-   iCursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, addressReg, generateS390MemoryReference(addressReg, 256, cg), iCursor);
-   iCursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, loopIterRegsiter, loopStartLabel);
-   }
 
 static void
 genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR::Register * enumReg, TR::Register * resReg,
