@@ -4944,6 +4944,27 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Register *miscellaneousReg = cg->allocateRegister();
    dependencies->addPostCondition(miscellaneousReg, TR::RealRegister::AssignAny);
 
+         //Just dirty memory! must be 0 ot grater than 1
+   static char* forceMemoryInit = feGetEnv("TR_forceMemoryInit");
+   if (forceMemoryInit)
+   {
+      needInitialization = true;
+      int sizeToDirty = atoi(forceMemoryInit);
+      cursor = generateSIInstruction(cg, TR::InstOpCode::MVI, node, generateS390MemoryReference(resultReg, 0, cg), 0xFF, cursor);
+      if(sizeToDirty != 0)
+      {
+         sizeToDirty-=2;
+         int loops = sizeToDirty / 256;
+         int offset=(sizeToDirty % 256)+2;
+         cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, sizeToDirty%256, generateS390MemoryReference(resultReg, 1, cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
+         sizeToDirty &= 0xff00;
+         for (int i=0; i<loops; i++)
+         {
+            cursor = generateSS1Instruction(cg, TR::InstOpCode::MVC, node, 255, generateS390MemoryReference(resultReg, offset+(i*256), cg), generateS390MemoryReference(resultReg, 0, cg), cursor);
+         }
+      }
+   }
+
    /********************************************* Zero initialize memory *********************************************/
    if (needInitialization)
    {
