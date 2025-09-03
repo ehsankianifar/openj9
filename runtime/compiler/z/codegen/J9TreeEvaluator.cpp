@@ -4794,8 +4794,11 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
  *
  * \details
  * Allocate 2 dimensional multi new arrays of any type with inline instructions if the size is within the range of TLH.
- * This helper only works on 64bit systems, 2 dimensional arrays and CPU version S390 Z196 and higher. The caller should
- *  check these conditions before calling this helper, otherwise it may cause errors or unpredicted results.
+ * This helper needs the following conditions to work properly and the caller should check these before calling:
+ * 1. Must be a 64bit system.
+ * 2. CPU version S390 Z196 and higher.
+ * 3. Number of dimensions is 2.
+ * 4. The Third child (type) is static.
  *
  * \param node
  * The node.
@@ -4853,16 +4856,13 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->gprClobberEvaluate(node->getThirdChild());
    TR::Register *vmThreadReg = cg->getMethodMetaDataRealRegister();
-
    TR::Register *sizeReg = cg->allocateRegister();
    TR::Register *dim1SizeReg = cg->allocateRegister();
    TR::Register *dim2SizeReg = cg->allocateRegister();
-   TR::Register *resultReg = cg->allocateRegister();
    TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,8,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dim1SizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dim2SizeReg, TR::RealRegister::AssignAny);
-   dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
@@ -4888,7 +4888,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    iComment("Load 2st dim length.");
    // If the second dimesion length is zero, second dim size is one discontiguous array.
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, zeroSecondDimLabel, cursor);
-   // size = (element size * dimension length) + header size. final size must get aligned.
+   // Size = (element size * dimension length) + header size. final size must get aligned.
    if (componentSize > 1)
       cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim2SizeReg, dim2SizeReg, trailingZeroes(componentSize), cursor);
    cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim2SizeReg, headerSize + alignmentConstant - 1, cursor);
@@ -4903,18 +4903,20 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    // TODO: if we should worry about overflow, use MSGRKC and add branch when overflow!
    //cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRNP, node, inlineAllocFaileLabel, cursor);
 
-   // size = (element size * dimension length) + header size. final size must get aligned.
+   // Size = (element size * dimension length) + header size. final size must get aligned.
    cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim1SizeReg, dim1SizeReg, trailingZeroes(elementSize), cursor);
    cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim1SizeReg, headerSize + alignmentConstant - 1, cursor);
    cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim1SizeReg, -alignmentConstant, cursor);
 
    cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, dim1SizeReg, cursor);
    iComment("Total required size in sizeReg.");
-   //Chech if size is too big for inline allocation.
+   // Chech if size is too big for inline allocation.
    cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CG, node, sizeReg, (int32_t)(cg->getMaxObjectSizeGuaranteedNotToOverflow()),
       TR::InstOpCode::COND_BH, inlineAllocFaileLabel, false /* needsCC */, false /* targetIsFarAndCold */, cursor);
 
    /********************************************* heap top test *********************************************/
+   TR::Register *resultReg = cg->allocateRegister();
+   dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, heapTopTestLabel, cursor);
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, resultReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Set result reg.");
@@ -4955,7 +4957,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    }
 
    /********************************************* First dimesion class and length *********************************************/
-   // load first dim length in lower 32bits and second dim length in higher 32bits.
+   // Load first dim length in lower 32bits and second dim length in higher 32bits.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, miscellaneousReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
    // Fist dim class and length:
    cursor = generateRXInstruction(cg, use64BitClasses ? TR::InstOpCode::STG : TR::InstOpCode::ST, node, classReg,
@@ -5082,8 +5084,8 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
    // Only generate inline code if nDims > 1
 
    if ((nDims == 2) && node->getThirdChild()->getSymbol()->isStatic()
-         && cg->comp()->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
-         && !cg->comp()->suppressAllocationInlining())
+         && comp ->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
+         && !comp ->suppressAllocationInlining())
       {
       return generateMultianewArrayWithInlineAllocators(node, cg);
       }
