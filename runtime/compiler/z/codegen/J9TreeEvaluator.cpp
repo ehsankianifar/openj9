@@ -4788,18 +4788,30 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
    }
 
-
-///////////////////////////////////////////////////////////////////////////////////////
-// multianewArrayEvaluator:  multi-dimensional new array of objects
-// NB Must only be used for arrays of at least two dimensions
-///////////////////////////////////////////////////////////////////////////////////////
+/**
+ * \brief
+ * Inline allocation of two dimensional new array.
+ *
+ * \details
+ * Allocate 2 dimensional multi new arrays of any type with inline instructions if the size is within the range of TLH.
+ * This helper only works on 64bit systems, 2 dimensional arrays and CPU version S390 Z196 and higher. The caller should
+ *  check these conditions before calling this helper, otherwise it may cause errors or unpredicted results.
+ *
+ * \param node
+ * The node.
+ *
+ * \param cg
+ * The code generator.
+ *
+ * \return
+ * TR::Register with the address of the new object.
+ */
 static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node, TR::CodeGenerator *cg)
 {
    #define iComment(str) if (compDebug) compDebug->addInstructionComment(cursor, (const_cast<char*>(str)));
    TR::Compilation *comp = cg->comp();
    TR_Debug *compDebug = comp->getDebug();
-   TR_ASSERT_FATAL(comp->target().is64Bit(), "multianewArrayEvaluator is only supported on 64-bit JVMs!");
-    TR_J9VMBase *fej9 = comp->fej9();
+   TR_J9VMBase *fej9 = comp->fej9();
    TR::LabelSymbol *inlineAllocFaileLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *slowPathLabel = generateLabelSymbol(cg);
    TR::LabelSymbol *controlFlowEndLabel = generateLabelSymbol(cg);
@@ -4830,7 +4842,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    J9ArrayClass* clazz = (J9ArrayClass*)node->getThirdChild()->getSymbol()->getStaticSymbol()->getStaticAddress();
    J9ArrayClass* compClazz = (J9ArrayClass*)clazz->componentType;
    uint32_t componentSize = (uint32_t)compClazz->flattenedElementSize;
-   traceMsg(cg->comp(), "EHSAN: clazz:%p compClazz:%p size:%d\n",clazz, compClazz, componentSize);
+   if (comp->getOption(TR_TraceCG))
+         {
+         traceMsg(comp, "Inline allocations for multianewarray of class:%p component-class:%p",clazz, compClazz);
+         }
 
    /********************************************* Register setup *********************************************/
    TR::Register *dimsPtrReg = cg->evaluate(node->getFirstChild());
@@ -5047,7 +5062,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Generate code for multianewarray
-// Checks the number of dimensions. For 1 dimensional arrays call the helper, for >1 call
+// Checks the number of dimensions. For 1 dimensional arrays call the helper, for 2 call
 // generateMultianewArrayWithInlineAllocators.
 ///////////////////////////////////////////////////////////////////////////////////////
 TR::Register *
