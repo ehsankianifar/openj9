@@ -4858,7 +4858,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Register *dim1SizeReg = cg->allocateRegister();
    TR::Register *dim2SizeReg = cg->allocateRegister();
    TR::Register *resultReg = cg->allocateRegister();
-   TR::Register *miscellaneousReg = cg->allocateRegister();
    TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,8,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dim1SizeReg, TR::RealRegister::AssignAny);
@@ -4867,7 +4866,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    dependencies->addPostCondition(dimsPtrReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
-   dependencies->addPostCondition(miscellaneousReg, TR::RealRegister::AssignAny);
 
    // TODO: should I start the control flow after hep top test?
    generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowStartLabel);
@@ -4930,6 +4928,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    // Update heap alloc.
    cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Heap top test pass. Update heap alloc.");
+
+   TR::Register *miscellaneousReg = cg->allocateRegister();
+   dependencies->addPostCondition(miscellaneousReg, TR::RealRegister::AssignAny);
 
    /********************************************* Zero initialize memory *********************************************/
    if (needInitialization)
