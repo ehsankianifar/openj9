@@ -5069,7 +5069,63 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    #undef iComment
 }
 
+static int getTwoDimensionalArrayComponentSize(TR::Node *classNode, TR::CodeGenerator *cg)
+   {
+   TR::SymbolReference *classSymRef = NULL;
+   const TR::ILOpCodes opcode = classNode->getOpCodeValue();
+   bool isClassNodeLoadAddr = opcode == TR::loadaddr;
+   // getting the symref
+   if (isClassNodeLoadAddr)
+      {
+      classSymRef = classNode->getSymbolReference();
+      }
+   else if (opcode == TR::aloadi)
+      {
+      // recognizedCallTransformer adds another layer of aloadi
+      while (classNode->getOpCodeValue() == TR::aloadi && classNode->getFirstChild()->getOpCodeValue() == TR::aloadi)
+         {
+         classNode = classNode->getFirstChild();
+         }
 
+      if (classNode->getOpCodeValue() == TR::aloadi && classNode->getFirstChild()->getOpCodeValue() == TR::loadaddr)
+         {
+         classSymRef = classNode->getFirstChild()->getSymbolReference();
+         }
+      }
+   // Infer the data type and length from the signature
+   if (classSymRef)
+      {
+      int32_t len;
+      const char *sig = classSymRef->getTypeSignature(len);
+      if (sig)
+         {
+         if (sig[0] == '[' && sig[1] == '[')
+            {
+            switch (sig[2])
+               {
+               case 'B':
+                  return 1;
+               case 'C':
+               case 'S':
+                  return 2;
+               case 'I':
+               case 'F':
+                  return 4;
+               case 'D':
+               case 'J':
+                  return 8;
+               case 'Z':
+                  return static_cast<int32_t>(TR::Compiler->om.elementSizeOfBooleanArray());
+               case 'L':
+               default :
+                  return TR::Compiler->om.sizeofReferenceField();
+               }
+            }
+         }
+      }
+
+   return -1;
+   }
 ///////////////////////////////////////////////////////////////////////////////////////
 // Generate code for multianewarray
 // Checks the number of dimensions. For 1 dimensional arrays call the helper, for 2 call
