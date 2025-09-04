@@ -5089,10 +5089,15 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(cg->comp(), "multiNewArraySize/%d", nDims), 1, TR::DebugCounter::Undetermined);
 
    // Only generate inline code if nDims > 1
+   int32_t len;
+   TR::SymbolReference *classSymRef = classNode->getSymbolReference();
+   const char *sig = classSymRef->getTypeSignature(len);
+   J9ArrayClass* clazz = (J9ArrayClass*)classNode->getSymbol()->getStaticSymbol()->getStaticAddress();
+   traceMsg(comp, "Sig:%s clazz:%p\n", sig, clazz);
 
    if ((nDims == 2) && node->getThirdChild()->getSymbol()->isStatic()
-         && comp ->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
-         && !comp ->suppressAllocationInlining())
+         && comp->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
+         && !comp->suppressAllocationInlining() && clazz)
       {
       return generateMultianewArrayWithInlineAllocators(node, cg);
       }
