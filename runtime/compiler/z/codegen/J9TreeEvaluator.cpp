@@ -5090,9 +5090,9 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    // Only generate inline code if nDims > 1
    int32_t len;
-   TR::SymbolReference *classSymRef = classNode->getSymbolReference();
+   TR::SymbolReference *classSymRef = node->getThirdChild()->getSymbolReference();
    const char *sig = classSymRef->getTypeSignature(len);
-   J9ArrayClass* clazz = (J9ArrayClass*)classNode->getSymbol()->getStaticSymbol()->getStaticAddress();
+   J9ArrayClass* clazz = (J9ArrayClass*)node->getThirdChild()->getSymbol()->getStaticSymbol()->getStaticAddress();
    traceMsg(comp, "Sig:%s clazz:%p\n", sig, clazz);
 
    if ((nDims == 2) && node->getThirdChild()->getSymbol()->isStatic()
