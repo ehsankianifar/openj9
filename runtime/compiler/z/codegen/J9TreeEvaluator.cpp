@@ -4821,7 +4821,7 @@ J9::Z::TreeEvaluator::anewArrayEvaluator(TR::Node * node, TR::CodeGenerator * cg
  * \return
  * TR::Register with the address of the new object.
  */
-static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node, TR::CodeGenerator *cg)
+static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node, TR::CodeGenerator *cg, int32_t componentSize)
 {
    #define iComment(str) if (compDebug) compDebug->addInstructionComment(cursor, (const_cast<char*>(str)));
    TR::Compilation *comp = cg->comp();
@@ -4844,6 +4844,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
    int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
    bool use64BitClasses = !TR::Compiler->om.generateCompressedObjectHeaders();
+   // Skip alignment if both header and elements are aligned.
+   bool alignFirstDim = !OMR::aligned(headerSize, alignmentConstant) || !OMR::alignedNoCheck(elementSize, alignmentConstant);
+   bool alignSecondDim = !OMR::alignedNoCheck(headerSize, alignmentConstant) || !OMR::alignedNoCheck(componentSize, alignmentConstant);
 
    static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
    bool needInitialization = disableBatchClear && !node->canSkipZeroInitialization();
@@ -4852,9 +4855,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    int32_t heapAllocOffset = allocateFromNonZeroHeap ? offsetof(J9VMThread, nonZeroHeapAlloc) : offsetof(J9VMThread, heapAlloc);
    int32_t heapTopOffset = allocateFromNonZeroHeap ? offsetof(J9VMThread, nonZeroHeapTop) : offsetof(J9VMThread, heapTop);
 
-   J9ArrayClass* clazz = (J9ArrayClass*)node->getThirdChild()->getSymbol()->getStaticSymbol()->getStaticAddress();
-   J9ArrayClass* compClazz = (J9ArrayClass*)clazz->componentType;
-   uint32_t componentSize = (uint32_t)compClazz->flattenedElementSize;
    if (comp->getOption(TR_TraceCG))
          {
          traceMsg(comp, "Inline allocations for multianewarray of class:%p component-class:%p",clazz, compClazz);
@@ -4887,7 +4887,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    /********************************************* Calculate size *********************************************/
    // If any dimension length is zero, resulting array have discontiguous array size
    cursor = generateRIInstruction(cg, TR::InstOpCode::LGHI, node, sizeReg,
-      (((int32_t)(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes())+alignmentConstant-1) & -alignmentConstant), cursor);
+      OMR::alignNoCheck(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes(), alignmentConstant), cursor);
    iComment("Load discontinuous array size.");
    cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim1SizeReg, generateS390MemoryReference(dimsPtrReg, 4, cg), cursor);
    iComment("Load 1st dim length.");
@@ -4900,9 +4900,13 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, zeroSecondDimLabel, cursor);
    // Size = (element size * dimension length) + header size. final size must get aligned.
    if (componentSize > 1)
-      cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim2SizeReg, dim2SizeReg, trailingZeroes(componentSize), cursor);
-   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim2SizeReg, headerSize + alignmentConstant - 1, cursor);
-   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim2SizeReg, -alignmentConstant, cursor);
+      {
+      cursor = generateRSInstruction(cg, TR::InstOpCode::SLA, node, dim2SizeReg, trailingZeroes(componentSize), cursor);
+      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, inlineAllocFaileLabel, cursor);
+      }
+   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim2SizeReg, alignSecondDim ? (headerSize + alignmentConstant - 1) : headerSize, cursor);
+   if (alignSecondDim)
+      cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim2SizeReg, -alignmentConstant, cursor);
    cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dim2SizeReg, cursor);
 
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, zeroSecondDimLabel, cursor);
@@ -4915,8 +4919,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    // Size = (element size * dimension length) + header size. final size must get aligned.
    cursor = generateRSInstruction(cg, TR::InstOpCode::SLLG, node, dim1SizeReg, dim1SizeReg, trailingZeroes(elementSize), cursor);
-   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim1SizeReg, headerSize + alignmentConstant - 1, cursor);
-   cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim1SizeReg, -alignmentConstant, cursor);
+   cursor = generateRIInstruction(cg, TR::InstOpCode::AHI, node, dim1SizeReg, alignFirstDim ? (headerSize + alignmentConstant - 1) : headerSize, cursor);
+   if (alignFirstDim)
+      cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim1SizeReg, -alignmentConstant, cursor);
 
    cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, sizeReg, dim1SizeReg, cursor);
    iComment("Total required size in sizeReg.");
@@ -5069,7 +5074,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    #undef iComment
 }
 
-static int getTwoDimensionalArrayComponentSize(TR::Node *classNode, TR::CodeGenerator *cg)
+static int32_t getTwoDimensionalArrayComponentSize(TR::Node *classNode, TR::CodeGenerator *cg)
    {
    TR::SymbolReference *classSymRef = NULL;
    const TR::ILOpCodes opcode = classNode->getOpCodeValue();
@@ -5144,18 +5149,13 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
    uint32_t nDims = secondChild->get32bitIntegralValue();
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(cg->comp(), "multiNewArraySize/%d", nDims), 1, TR::DebugCounter::Undetermined);
 
-   // Only generate inline code if nDims > 1
-   int32_t len;
-   TR::SymbolReference *classSymRef = node->getThirdChild()->getSymbolReference();
-   const char *sig = classSymRef->getTypeSignature(len);
-   J9ArrayClass* clazz = (J9ArrayClass*)node->getThirdChild()->getSymbol()->getStaticSymbol()->getStaticAddress();
-   traceMsg(comp, "Sig:%s clazz:%p\n", sig, clazz);
+   int32_t componentSize = getTwoDimensionalArrayComponentSize(node->getThirdChild() ,cg);
 
-   if ((nDims == 2) && node->getThirdChild()->getSymbol()->isStatic()
+   if ((nDims == 2) && (componentSize > 0)
          && comp->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
-         && !comp->suppressAllocationInlining() && clazz)
+         && !comp->suppressAllocationInlining())
       {
-      return generateMultianewArrayWithInlineAllocators(node, cg);
+      return generateMultianewArrayWithInlineAllocators(node, cg, componentSize);
       }
    else
       {
