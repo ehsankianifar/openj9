@@ -4843,7 +4843,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
    int32_t alignmentConstant = TR::Compiler->om.getObjectAlignmentInBytes();
-   bool use64BitClasses = !TR::Compiler->om.generateCompressedObjectHeaders();
+   bool useCompRefs = TR::Compiler->om.compressObjectReferences();
    // Skip alignment if both header and elements are aligned.
    bool alignFirstDim = !OMR::aligned(headerSize, alignmentConstant) || !OMR::aligned(elementSize, alignmentConstant);
    bool alignSecondDim = !OMR::aligned(headerSize, alignmentConstant) || !OMR::aligned(componentSize, alignmentConstant);
@@ -4857,7 +4857,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    if (comp->getOption(TR_TraceCG))
          {
-         traceMsg(comp, "Inline allocations for multianewarray of class:%p component-class:%p",clazz, compClazz);
+         traceMsg(comp, "Inline allocations for multianewarray with element size:%d and leaf component size:%d", elementSize, componentSize);
          }
 
    /********************************************* Register setup *********************************************/
@@ -4972,7 +4972,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    // Load first dim length in lower 32bits and second dim length in higher 32bits.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, miscellaneousReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
    // Fist dim class and length:
-   cursor = generateRXInstruction(cg, use64BitClasses ? TR::InstOpCode::STG : TR::InstOpCode::ST, node, classReg,
+   cursor = generateRXInstruction(cg, useCompRefs ? TR::InstOpCode::ST : TR::InstOpCode::STG, node, classReg,
       generateS390MemoryReference(resultReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
    cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, miscellaneousReg, generateS390MemoryReference(resultReg,
       (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
@@ -4984,8 +4984,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateRREInstruction(cg, TR::InstOpCode::AGR, node, dim1SizeReg, resultReg, cursor);
    iComment("dim1SizeReg points to the fist leaf array.");
    // Load component class to class register. In case of comp refs, class is in high order!
-   cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, classReg, generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+(use64BitClasses ? 0 : 4), cg), cursor);
-   if (!use64BitClasses)
+   cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, classReg, generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType)+(useCompRefs ? 4 : 0), cg), cursor);
+   if (useCompRefs)
       {
       cursor = generateRXInstruction(cg, TR::InstOpCode::L, node, classReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
       if (shiftAmount > 0)
@@ -5004,7 +5004,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
    cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, classReg, generateS390MemoryReference(dim1SizeReg,
       (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
-   if (use64BitClasses)
+   if (!useCompRefs)
       {
       cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, miscellaneousReg, generateS390MemoryReference(dim1SizeReg,
          (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
