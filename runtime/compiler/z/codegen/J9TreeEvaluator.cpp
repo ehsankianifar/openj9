@@ -5088,7 +5088,7 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
    uint32_t nDims = secondChild->get32bitIntegralValue();
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(cg->comp(), "multiNewArraySize/%d", nDims), 1, TR::DebugCounter::Undetermined);
 
-   int32_t componentSize = TR::Compiler->om.getTwoDimensionalArrayComponentSize(node->getThirdChild() ,cg);
+   int32_t componentSize = TR::Compiler->om.getTwoDimensionalArrayComponentSize(node->getThirdChild());
 
    if ((nDims == 2) && (componentSize > 0)
          && comp->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
