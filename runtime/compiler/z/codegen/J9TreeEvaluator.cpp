@@ -4939,7 +4939,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRNP, node, inlineAllocFailLabel, cursor);
 
    /********************************************* heap top test *********************************************/
-   TR::Register *resultReg = cg->allocateCollectedReferenceRegister();
+   TR::Register *resultReg = cg->allocateRegister();
    dependencies->addPostCondition(resultReg, TR::RealRegister::AssignAny);
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, heapTopTestLabel, cursor);
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, resultReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
