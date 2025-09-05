@@ -5057,6 +5057,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    /********************************************* Merge inline and helper results *********************************************/
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowEndLabel, dependencies, cursor);
+   // Can not have a collected reference register with unset value when helper is called. That would cause wrong GC register map.
+   TR::Register *collectedReferenceResultReg = cg->allocateCollectedReferenceRegister();
+   cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, collectedReferenceResultReg, resultReg, cursor);
+   iComment("Copy tmp result to final result.");
 
    /********************************************* OOL helper setup *********************************************/
    TR_S390OutOfLineCodeSection *outlinedSlowPath = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(slowPathLabel, controlFlowEndLabel, cg);
@@ -5079,9 +5083,10 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cg->stopUsingRegister(dim1SizeReg);
    cg->stopUsingRegister(dim2SizeReg);
    cg->stopUsingRegister(miscellaneousReg);
+   cg->stopUsingRegister(resultReg);
 
-   node->setRegister(resultReg);
-   return resultReg;
+   node->setRegister(collectedReferenceResultReg);
+   return collectedReferenceResultReg;
    #undef iComment
 }
 
