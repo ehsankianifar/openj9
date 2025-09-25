@@ -4938,6 +4938,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateRXInstruction(cg, TR::InstOpCode::CLG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapTopOffset, cg), cursor);
 
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BH, node, inlineAllocFailLabel, cursor);
+   cg->generateDebugCounter("multiNewArray/fast", 1, TR::DebugCounter::Undetermined);
 
    /********************************************* Allocate Object *********************************************/
    // Update heap alloc.
@@ -5050,6 +5051,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    TR::LabelSymbol *slowPathLabel = generateLabelSymbol(cg);
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, inlineAllocFailLabel, cursor);
+   cg->generateDebugCounter("multiNewArray/slow", 1, TR::DebugCounter::Undetermined);
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, slowPathLabel, cursor);
 
    /********************************************* Merge inline and helper results *********************************************/
