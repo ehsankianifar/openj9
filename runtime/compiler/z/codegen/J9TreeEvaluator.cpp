@@ -4883,7 +4883,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    iComment("Load 2st dim length.");
    // The size of zero length array is already loaded in size register. Jump over the array size calculation instructions if length is 0.
    TR::LabelSymbol *zeroSecondDimLabel = generateLabelSymbol(cg);
-   
+
    if (componentSize == 1)
       {
       // Load int32 second dim length to a 64 bit register and set condition mask.
