@@ -4883,19 +4883,27 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    iComment("Load 2st dim length.");
    // The size of zero length array is already loaded in size register. Jump over the array size calculation instructions if length is 0.
    TR::LabelSymbol *zeroSecondDimLabel = generateLabelSymbol(cg);
-   cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, zeroSecondDimLabel, cursor);
-   // Size = (element size * dimension length) + header size. final size must get aligned.
+   
    if (componentSize == 1)
       {
-      // Make sure second dim length is not negative.
-      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BL, node, inlineAllocFailLabel, cursor);
+      // Load int32 second dim length to a 64 bit register and set condition mask.
+      cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim2SizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
+      iComment("Load 2st dim length.");
       }
    else
       {
+      // Load int32 second dim length to a 64 bit register.
+      cursor = generateRXInstruction(cg, TR::InstOpCode::LGF, node, dim2SizeReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
+      iComment("Load 2st dim length.");
+      // To guarantee no overflow in size calculation, the `length * componentSize` should not be larger than int32.max. Additionaly, the
+      //  length can not be negative. Since length is an int32 value, using `SLA` will indicate, overflow, negative, and zero result.
       cursor = generateRSInstruction(cg, TR::InstOpCode::SLA, node, dim2SizeReg, trailingZeroes(componentSize), cursor);
-      // Only a positive int32 with no overflow is acceptable. This will guarantee no overflow in multiplication instruction.
-      cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRNP, node, inlineAllocFailLabel, cursor);
       }
+   // Bypass dim2 size calculation if the size is zero.
+   cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, zeroSecondDimLabel, cursor);
+   // Call helper if the length is negative or `length * componentSize` is larger that int32.max (overflow).
+   cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_MASK5, node, inlineAllocFailLabel, cursor);
+
    int32_t headerSize= TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
    // `size = (size + alignmentConstant - 1) & -alignmentConstant` equation round up the size to a factor of alignmentConstant.
    bool alignSecondDim = !(OMR::aligned(headerSize, alignmentConstant) && OMR::aligned(componentSize, alignmentConstant));
@@ -4993,6 +5001,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
    if (useCompRefs)
       {
+      // Use the class register for both class and length fields.
       cursor = generateRXInstruction(cg, TR::InstOpCode::L, node, classReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
       if (shiftAmount > 0)
          {
@@ -5005,34 +5014,42 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
          }
       }
 
-   // Update sizeReg to contain the address of the first element of the first dimension array.
+   // Load the address of the first element of the first dimension array in sizeReg.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg,
       generateS390MemoryReference(resultReg, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg), cursor);
    // Start setting second dim:
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel);
+   // Store the class field. In case of com Refs, store the class and length fields.
    cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, classReg, generateS390MemoryReference(dim1SizeReg,
       (int32_t)TR::Compiler->om.offsetOfObjectVftField(), cg), cursor);
    iComment("Start second dim alloc");
    if (!useCompRefs)
       {
+      // Store the array length.
       cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, scratchReg, generateS390MemoryReference(dim1SizeReg,
          (int32_t)TR::Compiler->om.offsetOfContiguousArraySizeField(), cg), cursor);
+      // Store the 64 bit leaf address in the relevant element of the first dim array.
       cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, dim1SizeReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
       }
    else if (shiftAmount == 0)
       {
+      // Store the 32 bit leaf address in the relevant element of the first dim array.
       cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, dim1SizeReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
       }
    else
       {
+      // Store the compressed 32 bit leaf address in the relevant element of the first dim array.
       cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, scratchReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
       }
 
-   cursor = generateRREInstruction(cg, TR::InstOpCode::AGFR, node, dim1SizeReg, dim2SizeReg, cursor);
+   // Load the next leaf address in dim1SizeReg.
+   cursor = generateRREInstruction(cg, TR::InstOpCode::ALGFR, node, dim1SizeReg, dim2SizeReg, cursor);
+   // Load the next element address of the first dim array in sizeReg.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg, generateS390MemoryReference(sizeReg, elementSize, cg), cursor);
    if(shiftAmount > 0)
       {
+      // Load the next compressed leaf address in high 32 bits of scratchReg.
       cursor = generateRRFInstruction(cg, TR::InstOpCode::ALHHHR, node, scratchReg, scratchReg, dim2SizeReg, cursor);
       }
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, scratchReg, secondDimLabel, cursor);
