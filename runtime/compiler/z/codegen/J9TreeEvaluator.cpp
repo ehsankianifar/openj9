@@ -4871,7 +4871,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    // Start of the internal control flow.
    TR::LabelSymbol *controlFlowStartLabel = generateLabelSymbol(cg);
    controlFlowStartLabel->setStartInternalControlFlow();
-   generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowStartLabel);
+   cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, controlFlowStartLabel, cursor);
    // If first dimension length is zero, there is only one discontiguous array for dim 1.
    TR::LabelSymbol *heapTopTestLabel = generateLabelSymbol(cg);
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, heapTopTestLabel, cursor);
