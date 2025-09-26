@@ -5035,7 +5035,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       // Set the address of the first element in address field of contiguous array. No action is required for zero length (discontiguous) arrays since it is already null.
       cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(resultReg, fej9->getOffsetOfContiguousDataAddrField(), cg), cursor);
       // Subtract the data field offset so we can move to the next leaf array in two steps. First to array header then to the next array.
-      cursor = generateRILInstruction(cg, TR::InstOpCode::SLFI, node, dim2SizeReg, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cursor);
+      cursor = generateRILInstruction(cg, TR::InstOpCode::SLFI, node, dim2SizeReg, (int32_t)TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cursor);
       }
 #endif /* J9VM_GC_SPARSE_HEAP_ALLOCATION */
 
