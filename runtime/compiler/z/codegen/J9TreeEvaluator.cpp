@@ -4847,7 +4847,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    TR::Register *sizeReg = cg->allocateRegister();
    TR::Register *dim1SizeReg = cg->allocateRegister();
    TR::Register *dim2SizeReg = cg->allocateRegister();
-   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,8,cg);
+   TR::RegisterDependencyConditions *dependencies = generateRegisterDependencyConditions(0,7,cg);
    dependencies->addPostCondition(sizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dim1SizeReg, TR::RealRegister::AssignAny);
    dependencies->addPostCondition(dim2SizeReg, TR::RealRegister::AssignAny);
@@ -4864,9 +4864,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       {
       // If dimensions child is referenced elsewhere, evaluate it before ICF.
       TR::Register *dimReg = cg->evaluate(node->getSecondChild());
-      dependencies->addPostCondition(dimReg, TR::RealRegister::AssignAny);
       }
-   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim1SizeReg, generateS390MemoryReference(dimsPtrReg, 4, cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::LTGF, node, dim1SizeReg, generateS390MemoryReference(dimsPtrReg, 4, cg));
    iComment("Load 1st dim length.");
 
    // Start of the internal control flow.
