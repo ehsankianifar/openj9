@@ -4971,7 +4971,6 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
    bool needInitialization = disableBatchClear && !node->canSkipZeroInitialization();
    TR::LabelSymbol *memoryInitializationExrlTargetLabel = NULL;
-   needInitialization = true;
    if (needInitialization)
       {
       TR::LabelSymbol *memoryInitializationEndLabel = generateLabelSymbol(cg);
@@ -4996,8 +4995,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, scratchReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
    iComment("Start first dim alloc");
    // Fist dim class and length:
-   bool useCompRefs = TR::Compiler->om.compressObjectReferences();
-   cursor = generateRXInstruction(cg, useCompRefs ? TR::InstOpCode::ST : TR::InstOpCode::STG, node, classReg,
+   bool compressedObjectHeaders = TR::Compiler->om.generateCompressedObjectHeaders();
+   cursor = generateRXInstruction(cg, compressedObjectHeaders ? TR::InstOpCode::ST : TR::InstOpCode::STG, node, classReg,
       generateS390MemoryReference(resultReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), cg), cursor);
    cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, scratchReg, generateS390MemoryReference(resultReg,
       static_cast<int32_t>(TR::Compiler->om.offsetOfContiguousArraySizeField()), cg), cursor);
@@ -5009,30 +5008,9 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    cursor = generateS390CompareAndBranchInstruction(cg, TR::InstOpCode::CL, node, scratchReg, 0, TR::InstOpCode::COND_BE, controlFlowEndLabel, false /* needsCC */, cursor);
 
    cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, dim1SizeReg, generateS390MemoryReference(dim1SizeReg, resultReg, 0, cg), cursor);
-   iComment("dim1SizeReg points to the fist leaf array.");
-   // Load component class to class register. In case of comp refs, the calss is 32bits long so using this register for leaf array length value as well.
-   // ClassReg when non-comp refs: |     class      |
-   // ClassReg when comp refs:     | class | length |
-   cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, classReg, generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType) + (useCompRefs ? 4 : 0), cg), cursor);
-   int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
-   if (useCompRefs)
-      {
-      // Use the class register for both class and length fields.
-      cursor = generateRXInstruction(cg, TR::InstOpCode::L, node, classReg, generateS390MemoryReference(dimsPtrReg, 0, cg), cursor);
-      if (shiftAmount > 0)
-         {
-         // Keep a compressed dim2 size in higher 32 bits.
-         // dim2SizeReg when shift amount is 0:    |          unused            |    leaf array size    |
-         // dim2SizeReg when shift amount is > 0:  | compressed leaf array size |    leaf array size    |
-         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, dim2SizeReg, dim2SizeReg, 0, 31, 32-shiftAmount, cursor);
-         iComment("Compressed dim2 size in higher 32bits.");
-         // Keep a compressed reference in higher 32bits of scratchReg.
-         // scratchReg when shift amount is 0:    |       leaf array length       |    number of leaf arrays    |
-         // scratchReg when shift amount is > 0:  | compressed leaf array address |    number of leaf arrays    |
-         cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, scratchReg, dim1SizeReg, 0, 31, 32-shiftAmount, cursor);
-         iComment("Compressed dim2 reference in higher 32 bits.");
-         }
-      }
+   iComment("Load first leaf array address.");
+   // Load component class to class register.
+   cursor = generateRXInstruction(cg, TR::InstOpCode::LG, node, classReg, generateS390MemoryReference(classReg, offsetof(J9ArrayClass, componentType), cg), cursor);
 
    // Load the address of the first element of the first dimension array in sizeReg.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg,
@@ -5040,43 +5018,35 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    // Start setting second dim:
    TR::LabelSymbol *secondDimLabel = generateLabelSymbol(cg);
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, secondDimLabel, cursor);
-   // Store the class field. In case of comp refs, store the class and length fields.
-   cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, classReg, generateS390MemoryReference(dim1SizeReg,
-      static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), cg), cursor);
-   iComment("Start second dim alloc");
-   if (!useCompRefs)
+   // Store the class field.
+   cursor = generateRXInstruction(cg, (compressedObjectHeaders ? TR::InstOpCode::ST : TR::InstOpCode::STG), node, classReg,
+      generateS390MemoryReference(dim1SizeReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), cg), cursor);
+   // Store the array length.
+   cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, scratchReg, generateS390MemoryReference(dim1SizeReg,
+      static_cast<int32_t>(TR::Compiler->om.offsetOfContiguousArraySizeField()), cg), cursor);
+   int32_t shiftAmount = TR::Compiler->om.compressedReferenceShift();
+   if (shiftAmount > 0)
       {
-      // Store the array length.
-      cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, scratchReg, generateS390MemoryReference(dim1SizeReg,
-         static_cast<int32_t>(TR::Compiler->om.offsetOfContiguousArraySizeField()), cg), cursor);
-      // Store the 64 bit leaf address in the relevant element of the first dim array.
-      cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, dim1SizeReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
-      }
-   else if (shiftAmount == 0)
-      {
-      // Store the 32 bit leaf address in the relevant element of the first dim array.
-      cursor = generateRXInstruction(cg, TR::InstOpCode::ST, node, dim1SizeReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
+      // Calculate the compressed reference of leaf array in the higher 32bits of dim2SizeReg.
+      cursor = generateRIEInstruction(cg, TR::InstOpCode::RISBG, node, dim2SizeReg, dim1SizeReg, 0, 31, 32-shiftAmount, cursor);
+      // Store the compressed 32 bit leaf address in the relevant element of the first dim array.
+      cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, dim2SizeReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
       }
    else
       {
-      // Store the compressed 32 bit leaf address in the relevant element of the first dim array.
-      cursor = generateRXInstruction(cg, TR::InstOpCode::STFH, node, scratchReg, generateS390MemoryReference(sizeReg, 0, cg), cursor);
+      // Store the 32 bit leaf address in the relevant element of the first dim array.
+      cursor = generateRXInstruction(cg, (TR::Compiler->om.compressObjectReferences() ? TR::InstOpCode::ST : TR::InstOpCode::STG), node, dim1SizeReg,
+         generateS390MemoryReference(sizeReg, 0, cg), cursor);
       }
 
    // Load the next leaf address in dim1SizeReg.
    cursor = generateRREInstruction(cg, TR::InstOpCode::ALGFR, node, dim1SizeReg, dim2SizeReg, cursor);
    // Load the next element address of the first dim array in sizeReg.
    cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, sizeReg, generateS390MemoryReference(sizeReg, elementSize, cg), cursor);
-   if(shiftAmount > 0)
-      {
-      // Load the next compressed leaf address in high 32 bits of scratchReg.
-      cursor = generateRRFInstruction(cg, TR::InstOpCode::ALHHHR, node, scratchReg, scratchReg, dim2SizeReg, cursor);
-      }
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRCT, node, scratchReg, secondDimLabel, cursor);
    cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, controlFlowEndLabel, cursor);
    iComment("Allocation done!");
 
-   /********************************************* Unreachable zone *********************************************/
    if (needInitialization)
       {
       // Keep memory EXRL target here to avoid extra branching.
