@@ -4977,7 +4977,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       // Subtract 1 to make up for XC instruction length field.
       cursor = generateRIInstruction(cg, TR::InstOpCode::AGHI, node, sizeReg, -1, cursor);
       // Calculate the number of iterations.
-      cursor = generateRSInstruction(cg, TR::InstOpCode::SRLG, node, scratchReg, sizeReg, 8, cursor);
+      cursor = generateRSInstruction(cg, TR::InstOpCode::SRAG, node, scratchReg, sizeReg, 8, cursor);
       TR::LabelSymbol *initResedualBytesLabel = generateLabelSymbol(cg);
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BZ, node, initResedualBytesLabel, cursor);
       // Initialize 256 blocks.
