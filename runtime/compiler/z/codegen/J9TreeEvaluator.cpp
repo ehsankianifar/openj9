@@ -4968,8 +4968,8 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    dependencies->addPostCondition(scratchReg, TR::RealRegister::AssignAny);
 
    /********************************************* Zero initialize memory *********************************************/
-   static bool disableBatchClear = feGetEnv("TR_DisableBatchClear") != NULL;
-   bool needInitialization = true;//disableBatchClear && !node->canSkipZeroInitialization();
+   static bool disableBatchClear = feGetEnv("TR_EnableMemInit") != NULL;
+   bool needInitialization = disableBatchClear ;//&& !node->canSkipZeroInitialization();
    if (needInitialization)
       {
       cursor = generateRREInstruction(cg, TR::InstOpCode::SLGR, node, sizeReg, resultReg, cursor);
