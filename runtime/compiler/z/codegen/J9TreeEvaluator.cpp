@@ -4922,7 +4922,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    bool alignSecondDim = !(OMR::aligned(headerSize, alignmentConstant) && OMR::aligned(componentSize, alignmentConstant));
    cursor = generateRIInstruction(cg, TR::InstOpCode::AGHI, node, dim2SizeReg, alignSecondDim ? (headerSize + alignmentConstant - 1) : headerSize, cursor);
    if (alignSecondDim)
-      cursor = generateRILInstruction(cg, TR::InstOpCode::NILL, node, dim2SizeReg, -alignmentConstant, cursor);
+      cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim2SizeReg, -alignmentConstant, cursor);
    cursor = generateRRInstruction(cg, TR::InstOpCode::LGR, node, sizeReg, dim2SizeReg, cursor);
 
    cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, zeroSecondDimLabel, cursor);
@@ -4937,7 +4937,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
    bool alignFirstDim = !(OMR::aligned(headerSize, alignmentConstant) && OMR::aligned(elementSize, alignmentConstant));
    cursor = generateRIInstruction(cg, TR::InstOpCode::AGHI, node, dim1SizeReg, alignFirstDim ? (headerSize + alignmentConstant - 1) : headerSize, cursor);
    if (alignFirstDim)
-      cursor = generateRILInstruction(cg, TR::InstOpCode::NILL, node, dim1SizeReg, -alignmentConstant, cursor);
+      cursor = generateRILInstruction(cg, TR::InstOpCode::NILF, node, dim1SizeReg, -alignmentConstant, cursor);
 
    // Add first dimension array size to sizeReg. Can not overflow.
    cursor = generateRREInstruction(cg, TR::InstOpCode::ALGR, node, sizeReg, dim1SizeReg, cursor);
