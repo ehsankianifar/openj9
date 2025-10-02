@@ -4993,7 +4993,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       cursor = generateRILInstruction(cg, TR::InstOpCode::EXRL, node, sizeReg, memoryInitializationExrlTargetLabel, cursor);
       // Recover resultReg.
       cursor = generateRIInstruction(cg, TR::InstOpCode::NILL, node, sizeReg, 0xff00, cursor);
-      cursor = generateRREInstruction(cg, TR::InstOpCode::SGR, node, resultReg, sizeReg, cursor);
+      cursor = generateRREInstruction(cg, TR::InstOpCode::SLGR, node, resultReg, sizeReg, cursor);
       }
 
    /********************************************* First dimesion class and length *********************************************/
