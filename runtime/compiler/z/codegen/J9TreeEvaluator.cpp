@@ -4983,7 +4983,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       // Initialize 256 blocks.
       cursor = genMemoryZeroingLoop(cg, node, cursor, resultReg, scratchReg, true /* use64bitLoop */);
       cursor = generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_B, node, initResedualBytesLabel, cursor);
-   
+
       TR::LabelSymbol *memoryInitializationExrlTargetLabel = generateLabelSymbol(cg);
       cursor = generateS390LabelInstruction(cg, TR::InstOpCode::label, node, memoryInitializationExrlTargetLabel, cursor);
       cursor = generateSS1Instruction(cg, TR::InstOpCode::XC, node, 0, generateS390MemoryReference(resultReg, 0, cg),
