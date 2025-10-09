@@ -4858,10 +4858,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       OMR::align(TR::Compiler->om.discontiguousArrayHeaderSizeInBytes(), alignmentConstant), cursor);
    iComment("Load discontinuous array size.");
 
-   if (node->getSecondChild()->getReferenceCount() > 1)
-      {
-      TR::Register *dimReg = cg->evaluate(node->getSecondChild());
-      }
+   TR::Register *dimReg = cg->evaluate(node->getSecondChild());
    TR::Register *classReg = cg->gprClobberEvaluate(node->getThirdChild());
    dependencies->addPostCondition(classReg, TR::RealRegister::AssignAny);
 
