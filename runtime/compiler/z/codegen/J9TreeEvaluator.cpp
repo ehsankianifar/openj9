@@ -4980,7 +4980,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
 
    /********************************************* Allocate Object *********************************************/
    // Update heap alloc.
-   cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, sizeReg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
+   cursor = generateRXInstruction(cg, TR::InstOpCode::STG, node, tmp1Reg, generateS390MemoryReference(vmThreadReg, heapAllocOffset, cg), cursor);
    iComment("Heap top test pass. Update heap alloc.");
    TR::Register *scratchReg = cg->allocateRegister();
    dependencies->addPostCondition(scratchReg, TR::RealRegister::AssignAny);
