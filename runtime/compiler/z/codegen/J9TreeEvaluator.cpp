@@ -5075,7 +5075,7 @@ static TR::Register * generateMultianewArrayWithInlineAllocators(TR::Node *node,
       cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, dim1SizeReg,
          generateS390MemoryReference(dim1SizeReg, TR::Compiler->om.contiguousArrayHeaderSizeInBytes(), cg), cursor);
       // Store the address of the first element in the data address field only if the second dimension length is non-zero.
-      cursor = generateRSInstruction(cg, TR::InstOpCode::STOCG, node, dim1SizeReg, getMaskForBranchCondition(TR::InstOpCode::BNE),
+      cursor = generateRSInstruction(cg, TR::InstOpCode::STOCG, node, dim1SizeReg, getMaskForBranchCondition(TR::InstOpCode::COND_BNE),
          generateS390MemoryReference(dim1SizeReg, (fej9->getOffsetOfContiguousDataAddrField() - TR::Compiler->om.contiguousArrayHeaderSizeInBytes()), cg), cursor);
       // Load the next leaf address in dim1SizeReg.
       cursor = generateRXInstruction(cg, TR::InstOpCode::LA, node, dim1SizeReg, generateS390MemoryReference(dim1SizeReg, dim2SizeReg, 0, cg), cursor);
