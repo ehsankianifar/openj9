@@ -88,6 +88,7 @@
 #include "jimagereader.h"
 #include "vendor_version.h"
 #include "omrlinkedlist.h"
+#include "EhsanLogger.hpp"
 
 #ifdef J9VM_OPT_ZIP_SUPPORT
 #include "zip_api.h"
@@ -4493,6 +4494,9 @@ runInitializationStage(J9JavaVM* vm, IDATA stage)
 {
 	RunDllMainData userData;
 	J9VMThread *mainThread = vm->mainThread;
+
+	//ehsan: initialize the logger
+	EhsanLogger::init();
 
 	/* Once the main J9VMThread has been created, each init stage expects the thread
 	 * to have entered the VM and released VM access.
