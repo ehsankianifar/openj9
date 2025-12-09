@@ -2405,7 +2405,10 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
    static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mloadiFromArray, maskType);
    if (isOpCodeImplemented(comp, op) && enableNewOP)
+      {
+      loadOpCode = TR::mloadiFromArray;
       return op;
+      }
 
    switch (numLanes)
       {
@@ -2625,7 +2628,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if(loadOpCode == NULL)
+         if(loadOpCode == TR::mloadiFromArray)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
