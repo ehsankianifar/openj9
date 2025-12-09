@@ -1643,7 +1643,7 @@ TR_VectorAPIExpansion::boxChild(TR::TreeTop *treeTop, TR::Node *node, uint32_t i
    if (!child->getOpCode().isVectorOpCode())  // not vectorized yet
       vloadNode = vectorizeLoadOrStore(this, child, opCodeType, true);
 
-   if (objectType == Mask && node->getOpCode().getVectorOperation() != TR::mstoreiToArray)
+   if (objectType == Mask && ().getVectorOperation() != TR::mstoreiToArray)
       {
       vloadNode = TR::Node::create(node, maskConv, 1, vloadNode);
       }
@@ -1793,9 +1793,9 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
    TR::Node *newOperand = TR::Node::createWithSymRef(operand, opcode, 1, vectorShadow);
    TR::Node *aladdNode = generateArrayElementAddressNode(comp(), payloadLoad, TR::Node::lconst(operand, 0), elementSize);
    newOperand->setAndIncChild(0, aladdNode);
-   if (operandObjectType == Mask && newOperand->getOpCode().getVectorOperation() != TR::mloadiFromArray)
+   if (operandObjectType == Mask && TR::ILOpCode::getVectorOperation(maskConv) != TR::mloadiFromArray)
       {
-         newOperand = TR::Node::create(operand, maskConv, 1, newOperand);
+      newOperand = TR::Node::create(operand, maskConv, 1, newOperand);
       }
 
    logprintf(_trace, comp()->log(), "Unboxed %s%d%s node %p into new node %p for parent %p\n",
