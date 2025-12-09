@@ -1731,7 +1731,7 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
       }
    else if (operandObjectType == Mask)
       {
-      maskConv = getLoadToMaskConversion(numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskLoadOpCode);
+      maskConv = getLoadToMaskConversion(comp(), numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskLoadOpCode);
       unboxingSupported = isOpCodeImplemented(comp(), maskConv);
       }
 
@@ -2400,9 +2400,12 @@ void TR_VectorAPIExpansion::astoreHandler(TR_VectorAPIExpansion *opt, TR::TreeTo
    }
 
 TR::ILOpCodes
-TR_VectorAPIExpansion::getLoadToMaskConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode)
+TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode)
    {
-   TR::ILOpCodes op;
+   static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
+   TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mloadiFromArray, maskType);
+   if (isOpCodeImplemented(comp, op) && enableNewOP)
+      return op;
 
    switch (numLanes)
       {
@@ -2527,7 +2530,7 @@ TR::Node *TR_VectorAPIExpansion::loadIntrinsicHandler(TR_VectorAPIExpansion *opt
          TR::ILOpCodes maskConversionOpCode;
          TR::ILOpCodes unused;
 
-         maskConversionOpCode = getLoadToMaskConversion(numLanes, resultType, unused);
+         maskConversionOpCode = getLoadToMaskConversion(comp, numLanes, resultType, unused);
 
          if (maskConversionOpCode == TR::BadILOp)
             return NULL;
@@ -2615,19 +2618,27 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
          {
          TR::ILOpCodes loadOpCode;
 
-         op = getLoadToMaskConversion(numLanes, vectorType, loadOpCode);
+         op = getLoadToMaskConversion(comp, numLanes, vectorType, loadOpCode);
 
          if (op == TR::BadILOp)
             return NULL;
 
+         
          TR::Node::recreate(node, op);
-
-         // need to alias with boolean array elements, so creating GenericIntArrayShadow
-         TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateGenericIntArrayShadowSymbolReference(0);
-
-         TR::Node *loadNode = TR::Node::createWithSymRef(node, loadOpCode, 1, symRef);
-         loadNode->setAndIncChild(0, aladdNode);
-         node->setAndIncChild(0, loadNode);
+         if(op == TR::mloadiFromArray)
+            {
+            TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
+            node->setSymbolReference(symRef);
+            node->setAndIncChild(0, aladdNode);
+            }
+         else
+            {
+            // need to alias with boolean array elements, so creating GenericIntArrayShadow
+            TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateGenericIntArrayShadowSymbolReference(0);
+            TR::Node *loadNode = TR::Node::createWithSymRef(node, loadOpCode, 1, symRef);
+            loadNode->setAndIncChild(0, aladdNode);
+            node->setAndIncChild(0, loadNode);
+            }
          }
 
       if (TR::Options::getVerboseOption(TR_VerboseVectorAPI))

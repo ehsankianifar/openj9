@@ -1826,10 +1826,13 @@ class TR_VectorAPIExpansion : public TR::Optimization
    *   \param loadOpCode
    *      Opcode for loading a mask from a byte array
    *
+   *   \param comp
+   *      Compilation
+   *
    *   \return
    *      conversion opcode
    */
-   static TR::ILOpCodes getLoadToMaskConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode);
+   static TR::ILOpCodes getLoadToMaskConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode);
 
 
    /** \brief
