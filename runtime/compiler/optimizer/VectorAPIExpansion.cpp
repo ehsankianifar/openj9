@@ -2406,7 +2406,6 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mloadiFromArray, maskType);
    if (isOpCodeImplemented(comp, op) && enableNewOP)
       {
-      loadOpCode = TR::mloadiFromArray;
       return op;
       }
 
@@ -2619,7 +2618,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
          }
       else if (objectType == Mask)
          {
-         TR::ILOpCodes loadOpCode;
+         TR::ILOpCodes loadOpCode = TR::BadILOp;
 
          op = getLoadToMaskConversion(comp, numLanes, vectorType, loadOpCode);
 
@@ -2628,7 +2627,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if(loadOpCode == TR::mloadiFromArray)
+         if(loadOpCode == TR::BadILOp)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
