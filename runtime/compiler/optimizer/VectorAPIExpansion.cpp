@@ -2625,7 +2625,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if(op == TR::mloadiFromArray)
+         if(loadOpCode == NULL)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
