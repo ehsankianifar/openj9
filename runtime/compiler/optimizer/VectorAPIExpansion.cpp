@@ -1787,16 +1787,18 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
 
    TR::ILOpCodes opcode = operandObjectType == Vector ?
                           TR::ILOpCode::createVectorOpCode(TR::vloadi, opCodeType)
-                          : maskLoadOpCode;
+                          : maskConv;
 
    TR::SymbolReference *vectorShadow = comp()->getSymRefTab()->findOrCreateArrayShadowSymbolRef(opCodeType, NULL);
    TR::Node *newOperand = TR::Node::createWithSymRef(operand, opcode, 1, vectorShadow);
    TR::Node *aladdNode = generateArrayElementAddressNode(comp(), payloadLoad, TR::Node::lconst(operand, 0), elementSize);
-   newOperand->setAndIncChild(0, aladdNode);
-
-   if (operandObjectType == Mask)
+   if (operandObjectType == Mask && maskConv.getVectorOperation() != TR::mloadiFromArray)
       {
-      newOperand = TR::Node::create(operand, maskConv, 1, newOperand);
+         newOperand->setAndIncChild(0, TR::Node::create(operand, maskLoadOpCode, 1, aladdNode));
+      }
+   else
+      {
+      newOperand->setAndIncChild(0, aladdNode);
       }
 
    logprintf(_trace, comp()->log(), "Unboxed %s%d%s node %p into new node %p for parent %p\n",
@@ -2618,7 +2620,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
          }
       else if (objectType == Mask)
          {
-         TR::ILOpCodes loadOpCode = TR::BadILOp;
+         TR::ILOpCodes loadOpCode;
 
          op = getLoadToMaskConversion(comp, numLanes, vectorType, loadOpCode);
 
@@ -2627,7 +2629,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if(loadOpCode == TR::BadILOp)
+         if( op.getVectorOperation() == TR::mloadiFromArray)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
