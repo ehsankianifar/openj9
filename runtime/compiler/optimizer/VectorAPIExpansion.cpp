@@ -1792,7 +1792,7 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
    TR::SymbolReference *vectorShadow = comp()->getSymRefTab()->findOrCreateArrayShadowSymbolRef(opCodeType, NULL);
    TR::Node *newOperand = TR::Node::createWithSymRef(operand, opcode, 1, vectorShadow);
    TR::Node *aladdNode = generateArrayElementAddressNode(comp(), payloadLoad, TR::Node::lconst(operand, 0), elementSize);
-   if (operandObjectType == Mask && maskConv.getVectorOperation() != TR::mloadiFromArray)
+   if (operandObjectType == Mask && newOperand->getOpCode().getVectorOperation() != TR::mloadiFromArray)
       {
          newOperand->setAndIncChild(0, TR::Node::create(operand, maskLoadOpCode, 1, aladdNode));
       }
@@ -2629,7 +2629,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if( op.getVectorOperation() == TR::mloadiFromArray)
+         if( node->getOpCode().getVectorOperation() == TR::mloadiFromArray)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
