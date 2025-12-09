@@ -1817,6 +1817,9 @@ class TR_VectorAPIExpansion : public TR::Optimization
   /** \brief
    *    Returns opcode for converting a load from a byte array into a mask
    *
+   *   \param comp
+   *      Compilation
+   *
    *   \param numLanes
    *      Nubmer of lanes
    *
@@ -1826,9 +1829,6 @@ class TR_VectorAPIExpansion : public TR::Optimization
    *   \param loadOpCode
    *      Opcode for loading a mask from a byte array
    *
-   *   \param comp
-   *      Compilation
-   *
    *   \return
    *      conversion opcode
    */
@@ -1837,6 +1837,9 @@ class TR_VectorAPIExpansion : public TR::Optimization
 
    /** \brief
    *    Returns opcode for storying mask into boolean array
+   *
+   *   \param comp
+   *      Compilation
    *
    *   \param numLanes
    *      Nubmer of lanes
@@ -1850,7 +1853,7 @@ class TR_VectorAPIExpansion : public TR::Optimization
    *   \return
    *      conversion opcode
    */
-   static TR::ILOpCodes getMaskToStoreConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode);
+   static TR::ILOpCodes getMaskToStoreConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode);
 
    };
 

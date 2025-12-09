@@ -1589,7 +1589,7 @@ TR_VectorAPIExpansion::boxChild(TR::TreeTop *treeTop, TR::Node *node, uint32_t i
       }
    else if (objectType == Mask)
       {
-      maskConv = getMaskToStoreConversion(numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskStoreOpCode);
+      maskConv = getMaskToStoreConversion(comp(), numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskStoreOpCode);
       boxingSupported = isOpCodeImplemented(comp(), maskConv);
       }
 
@@ -2447,7 +2447,7 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
 
 
 TR::ILOpCodes
-TR_VectorAPIExpansion::getMaskToStoreConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode)
+TR_VectorAPIExpansion::getMaskToStoreConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode)
    {
    static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mstoreiToArray, maskType);
@@ -2690,7 +2690,7 @@ TR::Node *TR_VectorAPIExpansion::storeIntrinsicHandler(TR_VectorAPIExpansion *op
 
          TR::DataType sourceType = TR::DataType::createMaskType(elementType, vectorLength);
          TR::ILOpCodes unused;
-         TR::ILOpCodes maskConversionOpCode = getMaskToStoreConversion(numLanes, sourceType, unused);
+         TR::ILOpCodes maskConversionOpCode = getMaskToStoreConversion(comp, numLanes, sourceType, unused);
 
          if (!isOpCodeImplemented(comp, maskConversionOpCode))
             return NULL;
@@ -2792,7 +2792,7 @@ TR::Node *TR_VectorAPIExpansion::transformStoreToArray(TR_VectorAPIExpansion *op
       else if (objectType == Mask)
          {
          TR::ILOpCodes storeOpCode;
-         op = getMaskToStoreConversion(numLanes, opCodeType, storeOpCode);
+         op = getMaskToStoreConversion(comp, numLanes, opCodeType, storeOpCode);
 
          
          TR::Node::recreate(node, storeOpCode);
