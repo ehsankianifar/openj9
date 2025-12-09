@@ -1643,7 +1643,7 @@ TR_VectorAPIExpansion::boxChild(TR::TreeTop *treeTop, TR::Node *node, uint32_t i
    if (!child->getOpCode().isVectorOpCode())  // not vectorized yet
       vloadNode = vectorizeLoadOrStore(this, child, opCodeType, true);
 
-   if (objectType == Mask && ().getVectorOperation() != TR::mstoreiToArray)
+   if (objectType == Mask && TR::ILOpCode::getVectorOperation(maskConv) != TR::mstoreiToArray)
       {
       vloadNode = TR::Node::create(node, maskConv, 1, vloadNode);
       }
@@ -2633,7 +2633,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
 
          
          TR::Node::recreate(node, op);
-         if( node->getOpCode().getVectorOperation() == TR::mloadiFromArray)
+         if( TR::ILOpCode::getVectorOperation(op) == TR::mloadiFromArray)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(vectorType, NULL);
             node->setSymbolReference(symRef);
@@ -2797,7 +2797,7 @@ TR::Node *TR_VectorAPIExpansion::transformStoreToArray(TR_VectorAPIExpansion *op
          
          TR::Node::recreate(node, storeOpCode);
 
-         if( node->getOpCode().getVectorOperation() == TR::mstoreiToArray)
+         if( TR::ILOpCode::getVectorOperation(op) == TR::mstoreiToArray)
             {
             TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(opCodeType, NULL);
             node->setSymbolReference(symRef);
