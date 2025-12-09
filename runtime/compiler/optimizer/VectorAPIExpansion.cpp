@@ -1643,7 +1643,7 @@ TR_VectorAPIExpansion::boxChild(TR::TreeTop *treeTop, TR::Node *node, uint32_t i
    if (!child->getOpCode().isVectorOpCode())  // not vectorized yet
       vloadNode = vectorizeLoadOrStore(this, child, opCodeType, true);
 
-   if (objectType == Mask)
+   if (objectType == Mask && node->getOpCode().getVectorOperation() != TR::mstoreiToArray)
       {
       vloadNode = TR::Node::create(node, maskConv, 1, vloadNode);
       }
@@ -1787,18 +1787,15 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
 
    TR::ILOpCodes opcode = operandObjectType == Vector ?
                           TR::ILOpCode::createVectorOpCode(TR::vloadi, opCodeType)
-                          : maskConv;
+                          : maskLoadOpCode;
 
    TR::SymbolReference *vectorShadow = comp()->getSymRefTab()->findOrCreateArrayShadowSymbolRef(opCodeType, NULL);
    TR::Node *newOperand = TR::Node::createWithSymRef(operand, opcode, 1, vectorShadow);
    TR::Node *aladdNode = generateArrayElementAddressNode(comp(), payloadLoad, TR::Node::lconst(operand, 0), elementSize);
+   newOperand->setAndIncChild(0, aladdNode);
    if (operandObjectType == Mask && newOperand->getOpCode().getVectorOperation() != TR::mloadiFromArray)
       {
-         newOperand->setAndIncChild(0, TR::Node::create(operand, maskLoadOpCode, 1, aladdNode));
-      }
-   else
-      {
-      newOperand->setAndIncChild(0, aladdNode);
+         newOperand = TR::Node::create(operand, maskConv, 1, newOperand);
       }
 
    logprintf(_trace, comp()->log(), "Unboxed %s%d%s node %p into new node %p for parent %p\n",
@@ -2408,6 +2405,7 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mloadiFromArray, maskType);
    if (isOpCodeImplemented(comp, op) && enableNewOP)
       {
+      loadOpCode = op;
       return op;
       }
 
@@ -2451,7 +2449,13 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
 TR::ILOpCodes
 TR_VectorAPIExpansion::getMaskToStoreConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode)
    {
-   TR::ILOpCodes op;
+   static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
+   TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mstoreiToArray, maskType);
+   if (isOpCodeImplemented(comp, op) && enableNewOP)
+      {
+      storeOpCode = op;
+      return op;
+      }
 
    switch (numLanes)
       {
@@ -2790,14 +2794,23 @@ TR::Node *TR_VectorAPIExpansion::transformStoreToArray(TR_VectorAPIExpansion *op
          TR::ILOpCodes storeOpCode;
          op = getMaskToStoreConversion(numLanes, opCodeType, storeOpCode);
 
-         // need to alias with boolean array elements, so creating GenericIntArrayShadow
-         TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateGenericIntArrayShadowSymbolReference(0);
+         
          TR::Node::recreate(node, storeOpCode);
-         node->setSymbolReference(symRef);
 
-         TR::Node *convNode = TR::Node::create(node, op, 1);
-         convNode->setChild(0, valueToWrite);
-         node->setAndIncChild(1, convNode);
+         if( node->getOpCode().getVectorOperation() == TR::mstoreiToArray)
+            {
+            TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateArrayShadowSymbolRef(opCodeType, NULL);
+            node->setSymbolReference(symRef);
+            }
+         else
+            {
+            // need to alias with boolean array elements, so creating GenericIntArrayShadow
+            TR::SymbolReference *symRef = comp->getSymRefTab()->findOrCreateGenericIntArrayShadowSymbolReference(0);
+            node->setSymbolReference(symRef);
+            TR::Node *convNode = TR::Node::create(node, op, 1);
+            convNode->setChild(0, valueToWrite);
+            node->setAndIncChild(1, convNode);
+            }
          }
 
       if (TR::Options::getVerboseOption(TR_VerboseVectorAPI))
