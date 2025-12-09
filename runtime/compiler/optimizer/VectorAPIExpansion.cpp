@@ -1589,7 +1589,7 @@ TR_VectorAPIExpansion::boxChild(TR::TreeTop *treeTop, TR::Node *node, uint32_t i
       }
    else if (objectType == Mask)
       {
-      maskConv = getMaskToStoreConversion(comp(), numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskStoreOpCode);
+      maskConv = getMaskToStoreConversion(numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskStoreOpCode);
       boxingSupported = isOpCodeImplemented(comp(), maskConv);
       }
 
@@ -1731,7 +1731,7 @@ TR_VectorAPIExpansion::unboxNode(TR::Node *parentNode, TR::Node *operand, vapiOb
       }
    else if (operandObjectType == Mask)
       {
-      maskConv = getLoadToMaskConversion(comp(), numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskLoadOpCode);
+      maskConv = getLoadToMaskConversion(numLanes, TR::DataType::createMaskType(elementType, vectorLength), maskLoadOpCode);
       unboxingSupported = isOpCodeImplemented(comp(), maskConv);
       }
 
@@ -2399,11 +2399,11 @@ void TR_VectorAPIExpansion::astoreHandler(TR_VectorAPIExpansion *opt, TR::TreeTo
    }
 
 TR::ILOpCodes
-TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode)
+TR_VectorAPIExpansion::getLoadToMaskConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &loadOpCode)
    {
    static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mloadiFromArray, maskType);
-   if (isOpCodeImplemented(comp, op) && enableNewOP)
+   if (isOpCodeImplemented(comp(), op) && enableNewOP)
       {
       loadOpCode = op;
       return op;
@@ -2447,11 +2447,11 @@ TR_VectorAPIExpansion::getLoadToMaskConversion(TR::Compilation *comp, int32_t nu
 
 
 TR::ILOpCodes
-TR_VectorAPIExpansion::getMaskToStoreConversion(TR::Compilation *comp, int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode)
+TR_VectorAPIExpansion::getMaskToStoreConversion(int32_t numLanes, TR::DataType maskType, TR::ILOpCodes &storeOpCode)
    {
    static bool enableNewOP = (feGetEnv("TR_EnableNewOP")!=NULL);
    TR::ILOpCodes op = TR::ILOpCode::createVectorOpCode(TR::mstoreiToArray, maskType);
-   if (isOpCodeImplemented(comp, op) && enableNewOP)
+   if (isOpCodeImplemented(comp(), op) && enableNewOP)
       {
       storeOpCode = op;
       return op;
@@ -2538,7 +2538,7 @@ TR::Node *TR_VectorAPIExpansion::loadIntrinsicHandler(TR_VectorAPIExpansion *opt
          TR::ILOpCodes maskConversionOpCode;
          TR::ILOpCodes unused;
 
-         maskConversionOpCode = getLoadToMaskConversion(comp, numLanes, resultType, unused);
+         maskConversionOpCode = getLoadToMaskConversion(numLanes, resultType, unused);
 
          if (maskConversionOpCode == TR::BadILOp)
             return NULL;
@@ -2626,7 +2626,7 @@ TR::Node *TR_VectorAPIExpansion::transformLoadFromArray(TR_VectorAPIExpansion *o
          {
          TR::ILOpCodes loadOpCode;
 
-         op = getLoadToMaskConversion(comp, numLanes, vectorType, loadOpCode);
+         op = getLoadToMaskConversion(numLanes, vectorType, loadOpCode);
 
          if (op == TR::BadILOp)
             return NULL;
@@ -2690,7 +2690,7 @@ TR::Node *TR_VectorAPIExpansion::storeIntrinsicHandler(TR_VectorAPIExpansion *op
 
          TR::DataType sourceType = TR::DataType::createMaskType(elementType, vectorLength);
          TR::ILOpCodes unused;
-         TR::ILOpCodes maskConversionOpCode = getMaskToStoreConversion(comp, numLanes, sourceType, unused);
+         TR::ILOpCodes maskConversionOpCode = getMaskToStoreConversion(numLanes, sourceType, unused);
 
          if (!isOpCodeImplemented(comp, maskConversionOpCode))
             return NULL;
@@ -2792,7 +2792,7 @@ TR::Node *TR_VectorAPIExpansion::transformStoreToArray(TR_VectorAPIExpansion *op
       else if (objectType == Mask)
          {
          TR::ILOpCodes storeOpCode;
-         op = getMaskToStoreConversion(comp, numLanes, opCodeType, storeOpCode);
+         op = getMaskToStoreConversion(numLanes, opCodeType, storeOpCode);
 
          
          TR::Node::recreate(node, storeOpCode);
