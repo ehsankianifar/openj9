@@ -5170,7 +5170,9 @@ J9::Z::TreeEvaluator::multianewArrayEvaluator(TR::Node * node, TR::CodeGenerator
 
    int32_t componentSize = TR::Compiler->om.getTwoDimensionalArrayComponentSize(node->getThirdChild());
 
-   if ((nDims == 2) && (componentSize > 0)
+   static bool noInlineMulti = feGetEnv("TR_noInlineMulti") != NULL;
+
+   if ((nDims == 2) && (componentSize > 0) && !noInlineMulti
          && comp->target().cpu.isAtLeast(OMR_PROCESSOR_S390_Z196)
          && !comp->suppressAllocationInlining())
       {
