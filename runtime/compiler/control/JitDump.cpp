@@ -127,6 +127,7 @@ traceILOfCrashedCompilationThread(J9VMThread *vmThread, TR::Compilation *comp, T
    debug->setLogger(jitdumpLogger);
 
    options->setOption(TR_TraceAll);
+   options->setOption(TR_TraceRA);
    options->setOption(TR_TraceKnownObjectGraph);
 
    jitdumpLogger->prints("<ilOfCrashedThread>\n");
