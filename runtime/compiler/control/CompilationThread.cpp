@@ -9170,6 +9170,8 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
                {
                if (options->getLogFile() != NULL)
                   options->setOption(TR_TraceAll);
+                  options->setOption(TR_TraceRA);
+                  options->setOption(TR_TerseRegisterPressureTrace);
                }
 
             TR_ASSERT(TR::comp() == NULL, "there seems to be a current TLS TR::Compilation object %p for this thread. At this point there should be no current TR::Compilation object", TR::comp());
@@ -9230,6 +9232,9 @@ TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrary *portLib, void * 
                }
 
             options->setOption(TR_TraceAll);
+
+            options->setOption(TR_TraceRA);
+            options->setOption(TR_TerseRegisterPressureTrace);
             options->setOption(TR_EnableParanoidOptCheck);
 
             // Tracing higher optimization level compilations may put us past the allocation limit and result in an
