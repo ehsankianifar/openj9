@@ -8473,10 +8473,7 @@ TR_MethodMetaData *TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrar
                 options->setOption(TR_TraceAll);
                 options->setOption(TR_EnableParanoidOptCheck);
 
-                // Enable register enumeration for JitDump to show register names instead of references
-                // This must be set after TR_TraceAll since it's normally set during options initialization
-                // based on requiresLogFile(), which checks for TR_TraceAll
-                options->setAddressEnumerationOption(TR_EnumerateRegister);
+                
 
                 // Tracing higher optimization level compilations may put us past the allocation limit and result in an
                 // std::bad_alloc exception being thrown. To maximize our chances of getting a trace log we artificially
@@ -8486,6 +8483,10 @@ TR_MethodMetaData *TR::CompilationInfoPerThreadBase::wrappedCompile(J9PortLibrar
                 // Trace crashing optimization or the codegen depending on where we crashed
                 UDATA vmState = that->_compInfo.getVMStateOfCrashedThread();
                 if ((vmState & J9VMSTATE_JIT_CODEGEN) == J9VMSTATE_JIT_CODEGEN) {
+                    // Enable register enumeration for JitDump to show register names instead of references
+                    // This must be set after TR_TraceAll since it's normally set during options initialization
+                    // based on requiresLogFile(), which checks for TR_TraceAll
+                    options->setAddressEnumerationOption(TR_EnumerateRegister);
                     if (that->_compInfo.crashWasDueToOrphanedConstRefs()) {
                         options->setOption(TR_TraceRetainedMethods);
                         options->setOption(TR_TraceConstProvenance);
