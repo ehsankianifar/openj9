@@ -3253,7 +3253,7 @@ TR::Register *J9::Z::TreeEvaluator::inlineMathFma(TR::Node *node, TR::CodeGenera
         // target = a*b + c
         TR::Register *c = cg->evaluate(node->getThirdChild());
         target = cg->allocateRegister(TR_FPR);
-        uint8_t mask6 = getVectorElementSizeMask(TR::DataType::getSize(node->getDataType()));
+        uint8_t mask6 = getVectorElementSizeMask(node);
         generateVRReInstruction(cg, TR::InstOpCode::VFMA, node, target, a, b, c, mask6, 0);
     } else {
         // target = c
