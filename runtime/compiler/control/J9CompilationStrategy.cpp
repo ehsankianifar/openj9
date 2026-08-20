@@ -1353,7 +1353,9 @@ void J9::CompilationStrategy::beforeCodeGen(TR_OptimizationPlan *plan, TR::Recom
             // the level at which we are compiling the current method for profiling.
             //
             level = current + 1;
-            countValue = PROFILING_INVOCATION_COUNT - 1; // defined in Profiler.hpp
+            // Use a full hot sample interval so the profiling body has more time to
+            // collect data before triggering a scorching compile.
+            countValue = TR::Options::_sampleInterval;
         } else {
             // figure out the next opt level and the next count
             TR::Compilation *comp = recomp->_compilation;
