@@ -577,8 +577,8 @@ void TR_VectorAPIExpansion::visitNodeToBuildVectorAliases(TR::Node *node, bool v
 
             bool canScalarize = methodTable[handlerIndex]._methodHandler(this, NULL, node, methodElementType,
                 vectorLength, _nodeTable[nodeIndex]._vinfo._objectType, methodNumLanes, checkScalarization);
-
-            if (boxingAllowed())
+            const bool enableScalarizing = feGetEnv("TR_EnableScalarization");
+            if (!enableScalarizing && boxingAllowed())
                 canScalarize = false; // TODO: enable
 
             _nodeTable[nodeIndex]._canVectorize = canVectorize;
