@@ -1963,7 +1963,7 @@ public:
      */
     static bool isOpCodeImplemented(TR::Compilation *comp, TR::ILOpCode opCode, bool check = true)
     {
-        bool result = check && comp->cg()->getSupportsOpCodeForAutoSIMD(opCode);
+        bool result = check && comp->cg()->getSupportsOpCodeForAutoSIMD(opCode, true /*includeScalarImplementation*/);
 
         if (!result && TR::Options::getVerboseOption(TR_VerboseVectorAPI)) {
             bool twoTypes = opCode.isTwoTypeVectorOpCode();
